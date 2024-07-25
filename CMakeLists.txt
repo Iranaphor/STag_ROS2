@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(ros2_template)
+project(STag_ROS2)
 
 # Export information to downstream packages
 ament_export_dependencies(rosidl_default_runtime)

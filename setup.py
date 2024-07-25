@@ -2,7 +2,7 @@ from setuptools import setup
 from glob import glob
 import os
 
-package_name = 'ros2_template'
+package_name = 'STag_ROS2'
 pkg = package_name
 
 setup(
