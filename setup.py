@@ -2,7 +2,7 @@ from setuptools import setup
 from glob import glob
 import os
 
-package_name = 'STag_ROS2'
+package_name = 'stag_ros2'
 pkg = package_name
 
 setup(
@@ -11,7 +11,9 @@ setup(
     packages=[package_name],
     data_files=[
         ('share/ament_index/resource_index/packages', [f'resource/{pkg}']),
-        ('share/{pkg}', ['package.xml']),
+        (f'share/{pkg}', ['package.xml']),
+        (f"share/{package_name}/launch", glob(os.path.join('launch', '*launch.[pxy][yml]*'))),
+        (f"share/{package_name}/config", glob(os.path.join('config', '*')))
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -22,6 +24,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            f'processor.py = {pkg}.processor:main',
         ],
     },
 )
