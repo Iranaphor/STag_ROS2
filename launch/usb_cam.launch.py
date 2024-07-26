@@ -13,10 +13,28 @@ def generate_launch_description():
     # Construct Launch Description
     LD = LaunchDescription()
 
+    # Remappings
+    remapping=[
+        (f'/image_raw', '/camera1/image_raw'),
+    ]
+
     # Processor
     LD.add_action(Node(package='stag_ros2',
                        executable='processor.py',
-                       name='processor'))
+                       name='processor',
+                       remappings=remapping))
+
+    # Calibrator
+    LD.add_action(Node(package='stag_ros2',
+                       executable='calibrator.py',
+                       name='calibrator',
+                       remappings=remapping))
+
+    # Renderer
+    LD.add_action(Node(package='stag_ros2',
+                       executable='renderer.py',
+                       name='renderer',
+                       remappings=remapping))
 
     # USB Camera
     LD.add_action(IncludeLaunchDescription(
@@ -27,6 +45,6 @@ def generate_launch_description():
     # RViz
     LD.add_action(Node(package='rviz2',
                        executable='rviz2',
-                       arguments=['-d', PKG+'/config/images.rviz']))
+                       arguments=['-d', PKG+'/config/images_usb_cam.rviz']))
 
     return LD

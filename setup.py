@@ -25,6 +25,8 @@ setup(
     entry_points={
         'console_scripts': [
             f'processor.py = {pkg}.processor:main',
+            f'calibrator.py = {pkg}.calibrator:main',
+            f'renderer.py = {pkg}.renderer:main',
         ],
     },
 )
