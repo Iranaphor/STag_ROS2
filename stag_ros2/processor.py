@@ -30,6 +30,10 @@ class Processor(Node):
         self.marker_width = 0.0865
         self.usb_cam_fov = 68.5
 
+        self.use_rolling_filter = True
+        self.rolling_filter_len = 15
+        self.buffer = dict()
+
         self.corners = None
         self.ids = None
         self.rejected_corners = None
@@ -71,7 +75,11 @@ class Processor(Node):
         if len(ids) > 0:
             marker_dict = dict()
             for i in range(len(ids)):
+                # Save value for easy access
                 marker_dict[ids[i][0]] = {'coordinates': corners[i][0].tolist()}
+                # Begin buffering for new node
+                if ids[i][0] not in self.buffer:
+                    self.buffer[ids[i][0]] = {'poses':[], 'rots':[]}
             self.publish_cam_relative_pose(marker_dict, self.marker_width)
 
         # draw detected markers with ids
@@ -111,6 +119,19 @@ class Processor(Node):
             #angle_degrees = angle_degrees if angle_degrees >=0 else 360 + angle_degrees
             values['degrees'] = angle_degrees
 
+
+            # Calculate the rolling filter
+            if self.use_rolling_filter:
+                # Add latest pose
+                self.buffer[id]['rots'].append(angle_degrees)
+                # Remove oldest rotation
+                #self.get_logger().info(str(len(self.buffer[id]['rots'])))
+                if len(self.buffer[id]['rots']) > self.rolling_filter_len:
+                    del self.buffer[id]['rots'][0]
+                # Determine iqr mean value
+                angle_degrees = np.median(np.array(self.buffer[id]['rots']))
+
+
             # Determine orientation
             angle_radians = np.deg2rad(angle_degrees)
             p = Pose()
@@ -140,7 +161,20 @@ class Processor(Node):
             p.position.x = round(pX,3)
             p.position.y = round(pY,3)
 
-            #self.get_logger().info(f"ID:{id}, Deg:{angle_degrees}, X:{p.position.x}, Y:{p.position.y}, Z:{p.position.z}")
+            # Calculate the rolling filter
+            if self.use_rolling_filter:
+                # Add latest pose
+                self.buffer[id]['poses'].append([p.position.x, p.position.y, p.position.z])
+                # Remove oldest pose
+                #self.get_logger().info(str(len(self.buffer[id]['poses'])))
+                if len(self.buffer[id]['poses']) > self.rolling_filter_len:
+                    del self.buffer[id]['poses'][0]
+                # Determine iqr mean value
+                filt = np.median(np.array(self.buffer[id]['poses']), axis=0)
+                p.position.x, p.position.y, p.position.z = filt[0], filt[1], filt[2]
+
+            # Debug the values
+            self.get_logger().debug(f"ID:{id}, Deg:{angle_degrees}, X:{p.position.x}, Y:{p.position.y}, Z:{p.position.z}")
 
             # Add to pose array
             PA.poses.append(p)

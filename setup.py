@@ -27,6 +27,7 @@ setup(
             f'processor.py = {pkg}.processor:main',
             f'calibrator.py = {pkg}.calibrator:main',
             f'renderer.py = {pkg}.renderer:main',
+            f'mqtt_forwarder.py = {pkg}.mqtt_forwarder:main',
         ],
     },
 )
