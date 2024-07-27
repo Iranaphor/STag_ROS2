@@ -1,0 +1,2 @@
+stag-python==1.0.2
+tf-transformations==1.0.0

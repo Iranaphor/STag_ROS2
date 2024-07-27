@@ -15,6 +15,12 @@
 
   <depend>usb_cam</depend>
   <depend>cv_bridge</depend>
+  <depend>python3-pydantic</depend>
+  <depend>python3-opencv</depend>
+  <depend>python3-msgpack</depend>
+  <depend>python3-transforms3d</depend>
+  <depend>python3-paho-mqtt</depend>
+
   <!--<depend>pip_stag_python</depend>-->
   <!--<depend>opencv_python</depend>-->
 

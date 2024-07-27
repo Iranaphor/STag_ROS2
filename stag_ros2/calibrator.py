@@ -13,11 +13,10 @@ import rclpy
 from rclpy.node import Node
 
 from std_msgs.msg import Empty
-from geometry_msgs.msg import Pose, PoseArray
+from geometry_msgs.msg import Pose, PoseArray, TransformStamped
 
 from tf2_ros.static_transform_broadcaster import StaticTransformBroadcaster
-from geometry_msgs.msg import TransformStamped
-import tf_transformations
+import transforms3d
 
 
 class Calibrator(Node):
@@ -29,18 +28,18 @@ class Calibrator(Node):
         self.marker_0_absolute.position.x = 0.0
         self.marker_0_absolute.position.y = 0.0
         self.marker_0_absolute.position.z = 0.0
+        self.marker_0_absolute.orientation.w = 0.0 #math.sqrt(2)/2
         self.marker_0_absolute.orientation.x = 1.0 #math.sqrt(2)/2
         self.marker_0_absolute.orientation.y = 0.0
         self.marker_0_absolute.orientation.z = 0.0
-        self.marker_0_absolute.orientation.w = 0.0 #math.sqrt(2)/2
         self.marker_1_absolute = Pose()
         self.marker_1_absolute.position.x = 0.11
         self.marker_1_absolute.position.y = 0.0
         self.marker_1_absolute.position.z = 0.0
+        self.marker_1_absolute.orientation.w = 0.0 #math.sqrt(2)/2
         self.marker_1_absolute.orientation.x = 1.0 #math.sqrt(2)/2
         self.marker_1_absolute.orientation.y = 0.0
         self.marker_1_absolute.orientation.z = 0.0
-        self.marker_1_absolute.orientation.w = 0.0 #math.sqrt(2)/2
 
         self.tf_published = False
         self.broadcaster = StaticTransformBroadcaster(self)
@@ -69,23 +68,27 @@ class Calibrator(Node):
     def pose_to_mat(self, pose):
         """Convert Pose message to 4x4 transformation matrix."""
         trans = [pose.position.x, pose.position.y, pose.position.z]
-        rot = [pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w]
-        angl = tf_transformations.euler_from_quaternion(rot)
-        return tf_transformations.compose_matrix(translate=trans, angles=angl)
-
+        rot = [pose.orientation.w, pose.orientation.x, pose.orientation.y, pose.orientation.z]
+        scale = [1.0, 1.0, 1.0]
+        shear = [0.0, 0.0, 0.0]
+        angl = transforms3d.euler.quat2euler(rot)
+        self.get_logger().info(f'{angl}')
+        rotation_mat = transforms3d.euler.euler2mat(angl[0], angl[1], angl[2])
+        mat = transforms3d.affines.compose(T=trans, R=rotation_mat, Z=scale, S=shear)
+        return mat
 
     def mat_to_pose(self, matrix):
         """Convert 4x4 transformation matrix to Pose message."""
-        from geometry_msgs.msg import Pose
         pose = Pose()
         pose.position.x = matrix[0, 3]
         pose.position.y = matrix[1, 3]
         pose.position.z = matrix[2, 3]
-        quaternion = tf_transformations.quaternion_from_matrix(matrix)
-        pose.orientation.x = quaternion[0]
-        pose.orientation.y = quaternion[1]
-        pose.orientation.z = quaternion[2]
-        pose.orientation.w = quaternion[3]
+        rotation_matrix = matrix[:3, :3]
+        quaternion = transforms3d.quaternions.mat2quat(rotation_matrix)
+        pose.orientation.w = quaternion[0]
+        pose.orientation.x = quaternion[1]
+        pose.orientation.y = quaternion[2]
+        pose.orientation.z = quaternion[3]
         return pose
 
 
@@ -104,6 +107,7 @@ class Calibrator(Node):
 
         # Assuming T_rel_cam ~= T_rel_map, solve for T_cam_map
         T_cam_map = np.dot(T_abs_0, np.dot(np.linalg.inv(T_rel_cam), np.linalg.inv(T_rel_0)))
+        #self.get_logger().info(f'T_cam_map, {T_cam_map}')
 
         # Convert the matrix back to a Pose
         camera_pose = self.mat_to_pose(T_cam_map)
@@ -120,10 +124,10 @@ class Calibrator(Node):
         t.transform.translation.x = pose.position.x
         t.transform.translation.y = pose.position.y
         t.transform.translation.z = pose.position.z
+        t.transform.rotation.w = pose.orientation.w
         t.transform.rotation.x = pose.orientation.x
         t.transform.rotation.y = pose.orientation.y
         t.transform.rotation.z = pose.orientation.z
-        t.transform.rotation.w = pose.orientation.w
         self.broadcaster.sendTransform(t)
 
 

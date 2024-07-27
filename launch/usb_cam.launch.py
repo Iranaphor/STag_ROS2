@@ -30,17 +30,17 @@ def generate_launch_description():
                        name='calibrator',
                        remappings=remapping))
 
-    # Renderer
-    LD.add_action(Node(package='stag_ros2',
-                       executable='renderer.py',
-                       name='renderer',
-                       remappings=remapping))
+#    # Renderer
+#    LD.add_action(Node(package='stag_ros2',
+#                       executable='renderer.py',
+#                       name='renderer',
+#                       remappings=remapping))
 
-    # MQTT Forwarder
-    LD.add_action(Node(package='stag_ros2',
-                       executable='mqtt_forwarder.py',
-                       name='mqtt_forwarder',
-                       remappings=remapping))
+#    # MQTT Forwarder
+#    LD.add_action(Node(package='stag_ros2',
+#                       executable='mqtt_forwarder.py',
+#                       name='mqtt_forwarder',
+#                       remappings=remapping))
 
     # USB Camera
     LD.add_action(IncludeLaunchDescription(
