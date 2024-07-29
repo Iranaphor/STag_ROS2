@@ -13,7 +13,8 @@ setup(
         ('share/ament_index/resource_index/packages', [f'resource/{pkg}']),
         (f'share/{pkg}', ['package.xml']),
         (f"share/{package_name}/launch", glob(os.path.join('launch', '*launch.[pxy][yml]*'))),
-        (f"share/{package_name}/config", glob(os.path.join('config', '*')))
+        (f"share/{package_name}/config", glob(os.path.join('config', '*'))),
+        (f"share/{package_name}/bash", glob(os.path.join('bash', '*.sh')))
     ],
     install_requires=['setuptools'],
     zip_safe=True,

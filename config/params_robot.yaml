@@ -1,0 +1,19 @@
+processor:
+  ros__parameters:
+    hamming_distance: 19
+    marker_width: 0.0865
+    usb_cam_fov: 68.5
+    use_rolling_filter: true
+    rolling_filter_len: 15
+    label_color_image: true
+    label_depth_image: false
+
+calibrator:
+  ros__parameters:
+    stag_camera_link: 'stag_camera_link'
+    calibration_config_file: 'config/stag_markers.yaml'
+
+mqtt_forwarder:
+  ros__parameters:
+    mqtt_encoding: 'json'
+    mqtt_ns: 'stag_ros2'

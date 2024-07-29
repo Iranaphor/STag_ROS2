@@ -11,6 +11,7 @@ import numpy as np
 
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, DurabilityPolicy
 
 from std_msgs.msg import Empty
 from geometry_msgs.msg import Pose, PoseArray, TransformStamped
@@ -41,28 +42,42 @@ class Calibrator(Node):
         self.marker_1_absolute.orientation.y = 0.0
         self.marker_1_absolute.orientation.z = 0.0
 
+        self.stag_camera_link = 'stag_camera_link'
+        self.trigger_calibration_once = True
+
         self.tf_published = False
         self.broadcaster = StaticTransformBroadcaster(self)
 
         t = 'calibration_array'
-        self.pose_array_sub = self.create_subscription(PoseArray, t, self.pose_array_cb, 10)
+        self.calibration_array_sub = self.create_subscription(PoseArray, t, self.calibration_array_cb, 10)
+        t = 'pose_array'
+        self.pose_array_pub = self.create_publisher(PoseArray, t, 10)
 
         t = 'trigger'
         self.trigger_sub = self.create_subscription(Empty, t, self.trigger_cb, 10)
 
+        t = 'camera_tf'
+        qos = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
+        self.camera_tf_pub = self.create_publisher(TransformStamped, t, qos)
 
-    def pose_array_cb(self, msg):
+    def calibration_array_cb(self, msg):
+        # Extract list of ids
         ids = [int(i) for i in msg.header.frame_id.split(',')]
+        # If the calibration numbers are in frame, save their positions
         if 0 in ids and 1 in ids:
-            #self.get_logger().info('calibration mode enabled')
             for k, pose in enumerate(msg.poses):
                 if ids[k] == 0:
                     self.marker_0_relative = pose
                 if ids[k] == 1:
                     self.marker_1_relative = pose
+            # If we have not calibrated yet, trigger it now
             if not self.tf_published:
                 self.trigger_cb(Empty())
-                self.tf_published = True
+                if self.trigger_calibration_once:
+                    self.tf_published = True
+        # Republish stag poses under the camera frame
+        msg.header.frame_id = self.stag_camera_link
+        self.pose_array_pub.publish(msg)
 
 
     def pose_to_mat(self, pose):
@@ -120,7 +135,7 @@ class Calibrator(Node):
         t = TransformStamped()
         t.header.stamp = self.get_clock().now().to_msg()
         t.header.frame_id = 'map'
-        t.child_frame_id = 'stag_camera_link'
+        t.child_frame_id = self.stag_camera_link
         t.transform.translation.x = pose.position.x
         t.transform.translation.y = pose.position.y
         t.transform.translation.z = pose.position.z
@@ -129,7 +144,7 @@ class Calibrator(Node):
         t.transform.rotation.y = pose.orientation.y
         t.transform.rotation.z = pose.orientation.z
         self.broadcaster.sendTransform(t)
-
+        self.camera_tf_pub.publish(t)
 
 def main(args=None):
     rclpy.init(args=args)

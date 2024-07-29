@@ -17,7 +17,7 @@ from rclpy.node import Node
 
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
-from geometry_msgs.msg import PoseArray, Pose
+from geometry_msgs.msg import PoseArray, Pose, PoseStamped
 
 
 class Processor(Node):
@@ -28,7 +28,7 @@ class Processor(Node):
 
         self.hamming = 'HD19'
         self.marker_width = 0.0865
-        self.usb_cam_fov = 68.5
+        self.cam_fov = 68.5
 
         self.use_rolling_filter = True
         self.rolling_filter_len = 15
@@ -39,20 +39,19 @@ class Processor(Node):
         self.rejected_corners = None
         self.image_size = None
 
-        t = 'tags'
-        self.tags_pub = self.create_publisher(String, t, 10)
-
-        t = 'pose_array'
-        self.pose_array_pub = self.create_publisher(PoseArray, t, 10)
+        self.label_color_image = True
+        self.label_depth_image = False
 
         t = 'calibration_array'
         self.pose_array2_pub = self.create_publisher(PoseArray, t, 10)
 
-        t = 'image_labelled'
-        self.image_pub = self.create_publisher(Image, t, 10)
+        if self.label_color_image:
+            t = 'image_labelled'
+            self.image_pub = self.create_publisher(Image, t, 10)
 
-        t = 'depth_labelled'
-        self.depth_pub = self.create_publisher(Image, t, 10)
+        if self.label_depth_image:
+            t = 'depth_labelled'
+            self.depth_pub = self.create_publisher(Image, t, 10)
 
         t = 'image_raw'
         self.image_sub = self.create_subscription(Image, t, self.image_cb, 10)
@@ -82,22 +81,14 @@ class Processor(Node):
                     self.buffer[ids[i][0]] = {'poses':[], 'rots':[]}
             self.publish_cam_relative_pose(marker_dict, self.marker_width)
 
-        # draw detected markers with ids
-        stag.drawDetectedMarkers(image, corners, ids)
-        stag.drawDetectedMarkers(image, rejected_corners, border_color=(255, 0, 0))
+        if self.label_color_image:
+            # draw detected markers with ids
+            stag.drawDetectedMarkers(image, corners, ids)
+            stag.drawDetectedMarkers(image, rejected_corners, border_color=(255, 0, 0))
 
-        # save resulting image
-        ros_image = self.bridge.cv2_to_imgmsg(image, encoding="passthrough")
-        self.image_pub.publish(ros_image)
-        #cv2.imshow("Converted Image", image)
-        #cv2.waitKey(1)
-
-
-######################################################################
-######################################################################
-######################################################################
-######################################################################
-######################################################################
+            # save resulting image
+            ros_image = self.bridge.cv2_to_imgmsg(image, encoding="passthrough")
+            self.image_pub.publish(ros_image)
 
 
     def publish_cam_relative_pose(self, marker_dict, marker_width):
@@ -106,8 +97,7 @@ class Processor(Node):
         # This code only works assuming markers are placed perpendicular
         # to direction of camera (i.e. are viewed straight on)
         PA = PoseArray()
-        #PA.header.frame_id = 'map'
-        PA.header.frame_id = 'stag_camera_link'
+        PA.header.frame_id = 'map'
         for id, values in marker_dict.items():
             corners = values['coordinates']
 
@@ -145,7 +135,7 @@ class Processor(Node):
             center = [(corners[0][0]+corners[2][0])/2, (corners[0][1]+corners[2][1])/2]
 
             # Calculate the focal length
-            fov_radians = np.deg2rad(self.usb_cam_fov)
+            fov_radians = np.deg2rad(self.cam_fov)
             focal_length = self.image_size[1] / (2 * np.tan(fov_radians / 2))
 
             # Assuming we have the width in pixels of the object (need actual measurement)
@@ -180,16 +170,8 @@ class Processor(Node):
             PA.poses.append(p)
 
         # Publish Pose Array
-        self.pose_array_pub.publish(PA)
         PA.header.frame_id = ','.join([str(i) for i in marker_dict.keys()])
         self.pose_array2_pub.publish(PA)
-
-
-######################################################################
-######################################################################
-######################################################################
-######################################################################
-######################################################################
 
 
     def depth_cb(self, msg):
