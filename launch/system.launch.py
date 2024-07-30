@@ -88,7 +88,7 @@ def launch_setup(context, *args, **kwargs):
         components += [
             Node(package='rviz2',
                  executable='rviz2',
-                 arguments=['-d', PKG+'/config/images_usb_cam.rviz'])]
+                 arguments=['-d', PKG+'/config/render.rviz'])]
 
     return components
 

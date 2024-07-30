@@ -34,10 +34,10 @@ class Forwarder(Node):
         t = 'calibration_array'
         self.calibration_array_sub = self.create_subscription(PoseArray, t, self.calibration_array_cb, 10)
 
-        self.mqtt_ip = os.getenv('MQTT_BROKER_IP')
-        self.mqtt_port = int(os.getenv('MQTT_BROKER_PORT'))
-        self.mqtt_ns = 'stag_ros2'
-        self.mqtt_encoding = 'json'
+        self.mqtt_ip = os.getenv('MQTT_BROKER_IP') #rosparam?
+        self.mqtt_port = int(os.getenv('MQTT_BROKER_PORT')) #rosparam?
+        self.mqtt_ns = 'stag_ros2' #rosparam
+        self.mqtt_encoding = 'json' #rosparam
         self.dumps = msgpack.dumps if self.mqtt_encoding == 'msgpack' else json.dumps
         self.loads = msgpack.loads if self.mqtt_encoding == 'msgpack' else json.loads
 

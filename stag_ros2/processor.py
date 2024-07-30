@@ -6,6 +6,7 @@
 # @date:
 # ----------------------------------
 
+import math
 import numpy as np
 import cv2
 from cv_bridge import CvBridge
@@ -26,12 +27,13 @@ class Processor(Node):
         super().__init__('processor')
         self.bridge = CvBridge()
 
-        self.hamming = 'HD19'
-        self.marker_width = 0.0865
-        self.cam_fov = 68.5
+        self.hamming = 'HD19' #rosparam
+        self.marker_width = 0.115 #rosparam
+        self.dfov = 68.5 #rosparam
+        self.hfov = None #rosparam
 
-        self.use_rolling_filter = True
-        self.rolling_filter_len = 15
+        self.use_rolling_filter = True #rosparam
+        self.rolling_filter_len = 15 #rosparam
         self.buffer = dict()
 
         self.corners = None
@@ -39,8 +41,8 @@ class Processor(Node):
         self.rejected_corners = None
         self.image_size = None
 
-        self.label_color_image = True
-        self.label_depth_image = False
+        self.label_color_image = True #rosparam
+        self.label_depth_image = False #rosparam
 
         t = 'calibration_array'
         self.pose_array2_pub = self.create_publisher(PoseArray, t, 10)
@@ -58,6 +60,32 @@ class Processor(Node):
 
         t = 'image_depth'
         self.depth_sub = self.create_subscription(Image, t, self.depth_cb, 10)
+
+
+    def configure_fov(self):
+        if self.hfov: return
+
+        # Calculate the aspect ratio
+        aspect_ratio = self.image_size[1] / self.image_size[0]
+
+        # Convert DFOV from degrees to radians
+        dfov_radians = math.radians(self.dfov)
+
+        # Calculate the tangent of half the DFOV
+        tan_half_dfov = math.tan(dfov_radians / 2)
+
+        # Calculate the denominator of the argument of arctan
+        denominator = math.sqrt(1 + aspect_ratio**-2)
+
+        # Divide the tangent by the denominator
+        arg = tan_half_dfov / denominator
+
+        # Calculate the arctan of the result
+        hfov_radians = 2 * math.atan(arg)
+
+        # Convert the result back to degrees
+        self.hfov = math.degrees(hfov_radians)
+        return
 
 
     def image_cb(self, msg):
@@ -135,7 +163,8 @@ class Processor(Node):
             center = [(corners[0][0]+corners[2][0])/2, (corners[0][1]+corners[2][1])/2]
 
             # Calculate the focal length
-            fov_radians = np.deg2rad(self.cam_fov)
+            if not self.hfov: self.configure_fov()
+            fov_radians = np.deg2rad(self.hfov)
             focal_length = self.image_size[1] / (2 * np.tan(fov_radians / 2))
 
             # Assuming we have the width in pixels of the object (need actual measurement)

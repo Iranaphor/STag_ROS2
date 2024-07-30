@@ -6,6 +6,7 @@
 # @date:
 # ----------------------------------
 
+import yaml
 import math
 import numpy as np
 
@@ -25,25 +26,34 @@ class Calibrator(Node):
     def __init__(self):
         super().__init__('calibrator')
 
-        self.marker_0_absolute = Pose()
-        self.marker_0_absolute.position.x = 0.0
-        self.marker_0_absolute.position.y = 0.0
-        self.marker_0_absolute.position.z = 0.0
-        self.marker_0_absolute.orientation.w = 0.0 #math.sqrt(2)/2
-        self.marker_0_absolute.orientation.x = 1.0 #math.sqrt(2)/2
-        self.marker_0_absolute.orientation.y = 0.0
-        self.marker_0_absolute.orientation.z = 0.0
-        self.marker_1_absolute = Pose()
-        self.marker_1_absolute.position.x = 0.11
-        self.marker_1_absolute.position.y = 0.0
-        self.marker_1_absolute.position.z = 0.0
-        self.marker_1_absolute.orientation.w = 0.0 #math.sqrt(2)/2
-        self.marker_1_absolute.orientation.x = 1.0 #math.sqrt(2)/2
-        self.marker_1_absolute.orientation.y = 0.0
-        self.marker_1_absolute.orientation.z = 0.0
+        # Read config from yaml file
+        config_file = '/home/thorvald/ros2_ws/src/stag_ros2/config/stag_markers.yaml' #rosparam
+        with open(config_file, 'r') as file:
+            data = yaml.safe_load(file)
 
-        self.stag_camera_link = 'stag_camera_link'
-        self.trigger_calibration_once = True
+        # Convert marker list into id dict
+        self.minimum_calibration_markers = 1 #rosparam
+        self.absolute_markers = dict()
+        for marker in data['markers']:
+            # Format pose object
+            pose = Pose()
+            pose.position.x = marker['pose']['position']['x']
+            pose.position.y = marker['pose']['position']['y']
+            pose.position.z = marker['pose']['position']['z']
+            pose.orientation.w = marker['pose']['orientation']['w']
+            pose.orientation.x = marker['pose']['orientation']['x']
+            pose.orientation.y = marker['pose']['orientation']['y']
+            pose.orientation.z = marker['pose']['orientation']['z']
+            # Save pose to dictionary
+            if marker['id'] not in self.absolute_markers:
+                self.absolute_markers[marker['id']] = dict()
+            self.absolute_markers[marker['id']]['pose'] = pose
+            self.absolute_markers[marker['id']] = pose
+
+        self.relative_markers = dict()
+
+        self.stag_camera_link = 'stag_camera_link' #rosparam
+        self.trigger_calibration_once = True #rosparam
 
         self.tf_published = False
         self.broadcaster = StaticTransformBroadcaster(self)
@@ -60,24 +70,38 @@ class Calibrator(Node):
         qos = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
         self.camera_tf_pub = self.create_publisher(TransformStamped, t, qos)
 
+
+
+
+
+
+
     def calibration_array_cb(self, msg):
         # Extract list of ids
         ids = [int(i) for i in msg.header.frame_id.split(',')]
+
         # If the calibration numbers are in frame, save their positions
-        if 0 in ids and 1 in ids:
+        known = [i for i in ids if i in self.absolute_markers.keys()]
+        if len(known) >= self.minimum_calibration_markers:
+
+            # Save marker positions into reference dictionary
             for k, pose in enumerate(msg.poses):
-                if ids[k] == 0:
-                    self.marker_0_relative = pose
-                if ids[k] == 1:
-                    self.marker_1_relative = pose
+                self.relative_markers[ids[k]] = pose
+
             # If we have not calibrated yet, trigger it now
             if not self.tf_published:
                 self.trigger_cb(Empty())
                 if self.trigger_calibration_once:
                     self.tf_published = True
+
         # Republish stag poses under the camera frame
         msg.header.frame_id = self.stag_camera_link
         self.pose_array_pub.publish(msg)
+
+
+
+
+
 
 
     def pose_to_mat(self, pose):
@@ -107,14 +131,14 @@ class Calibrator(Node):
         return pose
 
 
-    def trigger_cb(self, msg):
+    def trigger2_cb(self, msg):
         self.get_logger().info('trigger received')
 
         # Convert Pose to transformation matrices
-        T_rel_0 = self.pose_to_mat(self.marker_0_relative)
-        T_rel_1 = self.pose_to_mat(self.marker_1_relative)
-        T_abs_0 = self.pose_to_mat(self.marker_0_absolute)
-        T_abs_1 = self.pose_to_mat(self.marker_1_absolute)
+        T_rel_0 = self.pose_to_mat(self.relative_markers['00'])
+        T_rel_1 = self.pose_to_mat(self.relative_markers['01'])
+        T_abs_0 = self.pose_to_mat(self.absolute_markers['00'])
+        T_abs_1 = self.pose_to_mat(self.absolute_markers['01'])
 
         # Compute relative transformations in camera and map frames
         T_rel_cam = np.dot(np.linalg.inv(T_rel_0), T_rel_1)
@@ -129,6 +153,37 @@ class Calibrator(Node):
 
         # Publish the transformation using the existing function
         self.publish_tf(camera_pose)
+
+
+    def trigger_cb(self, msg):
+        self.get_logger().info('trigger received')
+
+        # We will use these lists to store individual transformations
+        T_cam_map_list = []
+
+        # Process each marker independently
+        for key in self.relative_markers:
+            if key in self.absolute_markers:
+                T_rel = self.pose_to_mat(self.relative_markers[key])
+                T_abs = self.pose_to_mat(self.absolute_markers[key])
+
+                # Assuming the transformation from the camera frame to the map frame through this marker
+                T_cam_map = np.dot(T_abs, np.linalg.inv(T_rel))
+                T_cam_map_list.append(T_cam_map)
+
+        # Combine all T_cam_map calculations. For example, average them if they are similar enough.
+        if T_cam_map_list:
+            # A simple way to combine is to average the transformations
+            # More complex methods could involve optimizing to best fit all T_cam_map_list elements
+            T_cam_map_average = np.mean(T_cam_map_list, axis=0)
+
+            # Convert the matrix back to a Pose
+            camera_pose = self.mat_to_pose(T_cam_map_average)
+
+            # Publish the transformation using the existing function
+            self.publish_tf(camera_pose)
+        else:
+            self.get_logger().info('No valid marker pairs found for transformation calculation.')
 
 
     def publish_tf(self, pose):

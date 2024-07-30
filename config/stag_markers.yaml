@@ -1,26 +1,28 @@
 # Used for localising the tf frame of the camera
 markers:
-  - id: 00
+  - id: 0
     hamming: 'HD19'
-    radius: 0.0865 #m
+    radius: 0.115 #m
     pose:
-        x: 0.0
-        y: 0.0
-        z: 0.0
-    orientation:
-        w: 0.0
-        x: 0.0
-        y: 0.0
-        z: 0.0
-  - id: 01
+      position:
+          x: 0.0
+          y: 0.0
+          z: 0.0
+      orientation:
+          w: 0.0
+          x: 1.0
+          y: 0.0
+          z: 0.0
+  - id: 1
     hamming: 'HD19'
-    radius: 0.0865 #m
+    radius: 0.115 #m
     pose:
-        x: 0.11
-        y: 0.0
-        z: 0.0
-    orientation:
-        w: 0.0
-        x: 0.0
-        y: 0.0
-        z: 0.0
+      position:
+          x: 0.144
+          y: 0.0
+          z: 0.0
+      orientation:
+          w: 0.0
+          x: 1.0
+          y: 0.0
+          z: 0.0
