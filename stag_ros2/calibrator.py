@@ -26,13 +26,19 @@ class Calibrator(Node):
     def __init__(self):
         super().__init__('calibrator')
 
+        # Declare rosparams for access
+        self.declare_parameter('stag_camera_link', rclpy.Parameter.Type.STRING)
+        self.declare_parameter('calibration_config_file', rclpy.Parameter.Type.STRING)
+        self.declare_parameter('trigger_calibration_once', rclpy.Parameter.Type.BOOL)
+        self.declare_parameter('minimum_calibration_markers', rclpy.Parameter.Type.INTEGER)
+
         # Read config from yaml file
-        config_file = '/home/thorvald/ros2_ws/src/stag_ros2/config/stag_markers.yaml' #rosparam
+        config_file = self.get_parameter('calibration_config_file').value
         with open(config_file, 'r') as file:
             data = yaml.safe_load(file)
 
         # Convert marker list into id dict
-        self.minimum_calibration_markers = 1 #rosparam
+        self.minimum_calibration_markers = self.get_parameter('minimum_calibration_markers').value
         self.absolute_markers = dict()
         for marker in data['markers']:
             # Format pose object
@@ -52,8 +58,8 @@ class Calibrator(Node):
 
         self.relative_markers = dict()
 
-        self.stag_camera_link = 'stag_camera_link' #rosparam
-        self.trigger_calibration_once = True #rosparam
+        self.stag_camera_link = self.get_parameter('stag_camera_link').value
+        self.trigger_calibration_once = self.get_parameter('trigger_calibration_once').value
 
         self.tf_published = False
         self.broadcaster = StaticTransformBroadcaster(self)
@@ -131,30 +137,6 @@ class Calibrator(Node):
         return pose
 
 
-    def trigger2_cb(self, msg):
-        self.get_logger().info('trigger received')
-
-        # Convert Pose to transformation matrices
-        T_rel_0 = self.pose_to_mat(self.relative_markers['00'])
-        T_rel_1 = self.pose_to_mat(self.relative_markers['01'])
-        T_abs_0 = self.pose_to_mat(self.absolute_markers['00'])
-        T_abs_1 = self.pose_to_mat(self.absolute_markers['01'])
-
-        # Compute relative transformations in camera and map frames
-        T_rel_cam = np.dot(np.linalg.inv(T_rel_0), T_rel_1)
-        T_rel_map = np.dot(np.linalg.inv(T_abs_0), T_abs_1)
-
-        # Assuming T_rel_cam ~= T_rel_map, solve for T_cam_map
-        T_cam_map = np.dot(T_abs_0, np.dot(np.linalg.inv(T_rel_cam), np.linalg.inv(T_rel_0)))
-        #self.get_logger().info(f'T_cam_map, {T_cam_map}')
-
-        # Convert the matrix back to a Pose
-        camera_pose = self.mat_to_pose(T_cam_map)
-
-        # Publish the transformation using the existing function
-        self.publish_tf(camera_pose)
-
-
     def trigger_cb(self, msg):
         self.get_logger().info('trigger received')
 
@@ -162,7 +144,8 @@ class Calibrator(Node):
         T_cam_map_list = []
 
         # Process each marker independently
-        for key in self.relative_markers:
+        keys = sorted(self.relative_markers.keys())
+        for key in keys:
             if key in self.absolute_markers:
                 T_rel = self.pose_to_mat(self.relative_markers[key])
                 T_abs = self.pose_to_mat(self.absolute_markers[key])

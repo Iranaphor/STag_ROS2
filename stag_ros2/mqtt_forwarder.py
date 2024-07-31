@@ -23,6 +23,9 @@ class Forwarder(Node):
     def __init__(self):
         super().__init__('mqtt_forwarder')
 
+        self.declare_parameter('mqtt_encoding', rclpy.Parameter.Type.STRING)
+        self.declare_parameter('mqtt_ns', rclpy.Parameter.Type.STRING)
+
         self.stag_camera_link = None
         t = 'camera_tf'
         qos = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
@@ -36,8 +39,8 @@ class Forwarder(Node):
 
         self.mqtt_ip = os.getenv('MQTT_BROKER_IP') #rosparam?
         self.mqtt_port = int(os.getenv('MQTT_BROKER_PORT')) #rosparam?
-        self.mqtt_ns = 'stag_ros2' #rosparam
-        self.mqtt_encoding = 'json' #rosparam
+        self.mqtt_ns = self.get_parameter('mqtt_ns').value
+        self.mqtt_encoding = self.get_parameter('mqtt_encoding').value
         self.dumps = msgpack.dumps if self.mqtt_encoding == 'msgpack' else json.dumps
         self.loads = msgpack.loads if self.mqtt_encoding == 'msgpack' else json.loads
 

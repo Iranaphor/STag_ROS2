@@ -27,13 +27,22 @@ class Processor(Node):
         super().__init__('processor')
         self.bridge = CvBridge()
 
-        self.hamming = 'HD19' #rosparam
-        self.marker_width = 0.115 #rosparam
-        self.dfov = 68.5 #rosparam
-        self.hfov = None #rosparam
+        self.declare_parameter('hamming_distance', rclpy.Parameter.Type.INTEGER)
+        self.declare_parameter('marker_width', rclpy.Parameter.Type.DOUBLE)
+        self.declare_parameter('dfov', rclpy.Parameter.Type.DOUBLE)
+        self.declare_parameter('hfov', rclpy.Parameter.Type.DOUBLE)
+        self.declare_parameter('use_rolling_filter', rclpy.Parameter.Type.BOOL)
+        self.declare_parameter('rolling_filter_len', rclpy.Parameter.Type.INTEGER)
+        self.declare_parameter('label_color_image', rclpy.Parameter.Type.BOOL)
+        self.declare_parameter('label_depth_image', rclpy.Parameter.Type.BOOL)
 
-        self.use_rolling_filter = True #rosparam
-        self.rolling_filter_len = 15 #rosparam
+        self.hamming = 'HD'+str(self.get_parameter('hamming_distance').value)
+        self.marker_width = self.get_parameter('marker_width').value
+        self.dfov = self.get_parameter('dfov').value
+        self.hfov = self.get_parameter('hfov').value
+
+        self.use_rolling_filter = self.get_parameter('use_rolling_filter').value
+        self.rolling_filter_len = self.get_parameter('rolling_filter_len').value
         self.buffer = dict()
 
         self.corners = None
@@ -41,8 +50,8 @@ class Processor(Node):
         self.rejected_corners = None
         self.image_size = None
 
-        self.label_color_image = True #rosparam
-        self.label_depth_image = False #rosparam
+        self.label_color_image = self.get_parameter('label_color_image').value
+        self.label_depth_image = self.get_parameter('label_depth_image').value
 
         t = 'calibration_array'
         self.pose_array2_pub = self.create_publisher(PoseArray, t, 10)

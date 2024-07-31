@@ -15,7 +15,7 @@ def launch_setup(context, *args, **kwargs):
     # Locate parameter file
     PKG = get_package_share_directory('stag_ros2')
     params_file = f'{PKG}/config/params.yaml'
-    calibration_file = f'{PKG}/config/stag_markers.yaml'
+    print(params_file)
 
     # Components to add to launch description
     components = []
@@ -58,7 +58,7 @@ def launch_setup(context, *args, **kwargs):
                        parameters=[params_file])]
 
     # MQTT Broker
-    if context.launch_configurations['use_local_broker']:
+    if context.launch_configurations['use_local_broker'] == True:
         script_path = PathJoinSubstitution([PKG, 'bash/mosquitto_broker.sh'])
         components += [
             ExecuteProcess(
@@ -104,8 +104,6 @@ def declare3(arg_name, description, envvar='', default=None):
 def generate_launch_description():
     # Locate parameter file
     PKG = get_package_share_directory('stag_ros2')
-    params_file = f'{PKG}/config/params.yaml'
-    calibration_file = f'{PKG}/config/stag_markers.yaml'
 
     # Construct Launch Description
     LD = LaunchDescription()
