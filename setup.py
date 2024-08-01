@@ -29,6 +29,7 @@ setup(
             f'calibrator.py = {pkg}.calibrator:main',
             f'renderer.py = {pkg}.renderer:main',
             f'mqtt_forwarder.py = {pkg}.mqtt_forwarder:main',
+            f'mqtt_receiver.py = {pkg}.mqtt_receiver:main',
         ],
     },
 )

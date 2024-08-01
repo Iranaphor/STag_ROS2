@@ -95,7 +95,7 @@ class Forwarder(Node):
                 }
             }
         }
-        self.mqtt_client.publish(f'{self.mqtt_ns}/camera', self.dumps(tf_dict), retain=True)
+        self.mqtt_client.publish(f'{self.mqtt_ns}/camera_tf', self.dumps(tf_dict), retain=True)
         self.stag_camera_link = msg.child_frame_id
 
     def pose_array_cb(self, msg):

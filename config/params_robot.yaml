@@ -1,5 +1,7 @@
-mqtt_forwarder:
-  ros__parameters:
-    mqtt_encoding: 'json'
-    mqtt_ns: 'stag_ros2'
-    markers: [5]
+/**:
+  mqtt_receiver:
+    ros__parameters:
+      robot_name: 'bob'
+      mqtt_encoding: 'json'
+      mqtt_ns: 'stag_ros2'
+      markers_to_subscribe: ['5']
