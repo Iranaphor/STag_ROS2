@@ -3,7 +3,7 @@
     ros__parameters:
       hamming_distance: 19
       marker_width: 0.115
-      dfov: 68.5
+      dfov: 68.5 #get from camera info?
       hfov: -0.0
       use_rolling_filter: true
       rolling_filter_len: 15
@@ -12,8 +12,8 @@
 
   calibrator:
     ros__parameters:
-      calibration_config_file: '/home/thorvald/ros2_ws/src/stag_ros2/config/stag_markers.yaml'
-      stag_camera_link: 'stag_camera_link'
+      calibration_config_file: 'package://stag_ros2/config/stag_markers.yaml'
+      #stag_camera_link_suffix: '_camera_link' # this now comes from the namespace + stag_camera_link
       trigger_calibration_once: True
       minimum_calibration_markers: 2
 

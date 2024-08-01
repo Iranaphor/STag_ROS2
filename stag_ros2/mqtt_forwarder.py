@@ -56,10 +56,11 @@ class Forwarder(Node):
             try:
                 self.get_logger().warn('running with paho version post-2.0.0')
                 ver = mqtt.CallbackAPIVersion.VERSION1
-                self.mqtt_client = mqtt.Client(ver, 'stag_ros2_publisher')
+                namespace = node.get_namespace()
+                self.mqtt_client = mqtt.Client(ver, self.get_namespace()+'_stag_ros2_publisher')
             except:
                 self.get_logger().warn('running with paho version pre-2.0.0')
-                self.mqtt_client = mqtt.Client('stag_ros2_publisher')
+                self.mqtt_client = mqtt.Client(self.get_namespace()+'_stag_ros2_publisher')
             self.mqtt_client.on_connect = self.on_connect
             #self.mqtt_client.on_message = self.on_mqtt_message
             self.mqtt_client.connect(self.mqtt_ip, self.mqtt_port)

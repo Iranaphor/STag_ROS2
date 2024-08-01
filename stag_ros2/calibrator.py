@@ -6,9 +6,12 @@
 # @date:
 # ----------------------------------
 
+import os
 import yaml
 import math
 import numpy as np
+
+from ament_index_python.packages import get_package_share_directory
 
 import rclpy
 from rclpy.node import Node
@@ -27,13 +30,18 @@ class Calibrator(Node):
         super().__init__('calibrator')
 
         # Declare rosparams for access
-        self.declare_parameter('stag_camera_link', rclpy.Parameter.Type.STRING)
+        #self.declare_parameter('stag_camera_link_suffix', rclpy.Parameter.Type.STRING)
         self.declare_parameter('calibration_config_file', rclpy.Parameter.Type.STRING)
         self.declare_parameter('trigger_calibration_once', rclpy.Parameter.Type.BOOL)
         self.declare_parameter('minimum_calibration_markers', rclpy.Parameter.Type.INTEGER)
 
         # Read config from yaml file
         config_file = self.get_parameter('calibration_config_file').value
+        if config_file.startswith('package://'):
+            config_file = config_file[len('package://'):]
+            package_name, relative_path = config_file.split('/', 1)
+            package_path = get_package_share_directory(package_name)
+            config_file = os.path.join(package_path, relative_path)
         with open(config_file, 'r') as file:
             data = yaml.safe_load(file)
 
@@ -58,7 +66,11 @@ class Calibrator(Node):
 
         self.relative_markers = dict()
 
-        self.stag_camera_link = self.get_parameter('stag_camera_link').value
+        ns = self.get_namespace() if self.get_namespace() != '/' else 'stag_ros2'
+        self.stag_camera_link = ns[1:].replace('/', '_')+'_camera_link'
+        self.get_logger().info(f'{ns}')
+        self.get_logger().info(f'{self.stag_camera_link}')
+
         self.trigger_calibration_once = self.get_parameter('trigger_calibration_once').value
 
         self.tf_published = False

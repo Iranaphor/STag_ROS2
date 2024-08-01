@@ -14,8 +14,13 @@ from ament_index_python.packages import get_package_share_directory
 def launch_setup(context, *args, **kwargs):
     # Locate parameter file
     PKG = get_package_share_directory('stag_ros2')
-    params_file = f'{PKG}/config/params.yaml'
-    print(params_file)
+    #params_file = f'{PKG}/config/params.yaml'
+    params_file = context.launch_configurations['params_file']
+
+    if context.launch_configurations['camera'] == 'usb_cam':
+        #usb_cam_params_file = f'{PKG}/config/params_usb_cam.yaml'
+        usb_cam_params_file = context.launch_configurations['usb_cam_params_file']
+
 
     # Components to add to launch description
     components = []
@@ -24,38 +29,49 @@ def launch_setup(context, *args, **kwargs):
     remapping = []
     ns = context.launch_configurations['namespace']
     if context.launch_configurations['camera'] == 'usb_cam':
-        remapping+=[(f'{ns}/image_raw', '/camera1/image_raw')]
+        #remapping += [
+        #    (f'{ns}/image_raw', '/camera1/image_raw')
+        #]
+        #cam_remappings = [
+        #    ('image_raw', f'{name}/image_raw'),
+        #    ('image_raw/compressed', f'{name}/image_compressed'),
+        #    ('image_raw/compressedDepth', f'{name}/compressedDepth'),
+        #    ('image_raw/theora', f'{name}/image_raw/theora'),
+        #    ('camera_info', f'{name}/camera_info'),
+        #]
+        pass
+
     if context.launch_configurations['camera'] == 'realsense':
         remapping+=[(f'{ns}/image_raw',   '/camera/camera/color/image_raw'),
                    (f'{ns}/image_depth', '/camera/camera/depth/image_rect_raw')]
 
     # Processor
     components += [Node(package='stag_ros2',
-                       executable='processor.py',
-                       name='processor',
-                       namespace=context.launch_configurations['namespace'],
-                       remappings=remapping,
-                       parameters=[params_file])]
+                        executable='processor.py',
+                        name='processor',
+                        namespace=context.launch_configurations['namespace'],
+                        remappings=remapping,
+                        parameters=[params_file])]
 
     # Calibrator
     components += [Node(package='stag_ros2',
-                       executable='calibrator.py',
-                       name='calibrator',
-                       namespace=context.launch_configurations['namespace'],
-                       parameters=[params_file])]
+                        executable='calibrator.py',
+                        name='calibrator',
+                        namespace=context.launch_configurations['namespace'],
+                        parameters=[params_file])]
 
     # Renderer
     components += [Node(package='stag_ros2',
-                       executable='renderer.py',
-                       name='renderer',
-                       namespace=context.launch_configurations['namespace'])]
+                        executable='renderer.py',
+                        name='renderer',
+                        namespace=context.launch_configurations['namespace'])]
 
     # MQTT Forwarder
     components += [Node(package='stag_ros2',
-                       executable='mqtt_forwarder.py',
-                       name='mqtt_forwarder',
-                       namespace=context.launch_configurations['namespace'],
-                       parameters=[params_file])]
+                        executable='mqtt_forwarder.py',
+                        name='mqtt_forwarder',
+                        namespace=context.launch_configurations['namespace'],
+                        parameters=[params_file])]
 
     # MQTT Broker
     if context.launch_configurations['use_local_broker'] == True:
@@ -69,11 +85,11 @@ def launch_setup(context, *args, **kwargs):
 
     # Camera (usb_cam or realsense)
     if context.launch_configurations['camera'] == 'usb_cam':
-        components += [
-            IncludeLaunchDescription(
-                PythonLaunchDescriptionSource([
-                    FindPackageShare('usb_cam'),
-                    '/launch/camera.launch.py']))]
+        components += [Node(package='usb_cam',
+                            executable='usb_cam_node_exe',
+                            name='usb_cam',
+                            namespace=ns,
+                            parameters=[usb_cam_params_file])]
 
     elif context.launch_configurations['camera'] == 'realsense':
         components += [
@@ -127,6 +143,14 @@ def generate_launch_description():
     # Define Camera Arguments
     desc='Whether to launch rviz'
     LD.add_action(declare3('use_rviz', desc, envvar='USE_RVIZ', default=True))
+
+    # Define Parameter Files
+    desc='Paramater file for stag systems'
+    default = f'{PKG}/config/params.yaml'
+    LD.add_action(declare3('params_file', desc, envvar='STAG_PARAMS', default=default))
+    desc='Paramater file for usb_cam'
+    default = f'{PKG}/config/params_usb_cam.yaml'
+    LD.add_action(declare3('usb_cam_params_file', desc, envvar='USB_PARAMS', default=default))
 
 
     # Add the Components to Launch
