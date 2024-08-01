@@ -39,8 +39,10 @@ class Receiver(Node):
         self.markers = self.get_parameter('markers_to_subscribe').value
         self.marker_publishers = dict()
         for marker in self.markers:
-            t = f'markers/m{marker}'
+            t = f'stag/markers/m{marker}'
             self.marker_publishers[marker] = self.create_publisher(PoseStamped, t, 10)
+        t = 'stag/pose_array'
+        self.pose_array_pub = self.create_publisher(PoseArray, t, 10)
 
         # Setup
         self.broadcaster = StaticTransformBroadcaster(self)
@@ -81,12 +83,13 @@ class Receiver(Node):
         if msg.topic.endswith('camera_tf'):
             self.camera_tf_cb(data)
         if msg.topic.endswith('pose_array'):
-            self.camera_tf_cb(data)
+            self.pose_array_cb(data)
         if '/markers/' in msg.topic:
             self.marker_cb(data, msg.topic.split('/markers/')[-1])
 
 
     def camera_tf_cb(self, tf_data):
+        self.get_logger().warn(f'camera tf received')
         # Publish tf for camera
         msg = TransformStamped()
         msg.header.stamp.sec = tf_data['header']['stamp']['sec']
@@ -106,7 +109,7 @@ class Receiver(Node):
 
     def pose_array_cb(self, pa_data):
         # Publish full list of markers
-        msg = PoseStamped()
+        msg = PoseArray()
         msg.header.stamp.sec = pa_data['header']['stamp']['sec']
         msg.header.stamp.nanosec = pa_data['header']['stamp']['nanosec']
         msg.header.frame_id = pa_data['header']['frame_id']
@@ -121,7 +124,7 @@ class Receiver(Node):
             pose.orientation.z = p_data['orientation']['z']
             msg.poses += [pose]
         # Publish full list of markers
-        self.posearray_pub.publish(msg)
+        self.pose_array_pub.publish(msg)
 
 
     def marker_cb(self, p_data, marker_id):
