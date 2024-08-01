@@ -125,7 +125,7 @@ class Forwarder(Node):
                 }
             } for pose in msg.poses]
         }
-        self.mqtt_client.publish(f'{self.mqtt_ns}/poses', self.dumps(pa_dict))
+        self.mqtt_client.publish(f'{self.mqtt_ns}/pose_array', self.dumps(pa_dict))
 
     def calibration_array_cb(self, msg):
         # Exit if tf is not published or client is not ready
