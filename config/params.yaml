@@ -13,8 +13,7 @@
   calibrator:
     ros__parameters:
       calibration_config_file: 'package://stag_ros2/config/stag_markers.yaml'
-      #stag_camera_link_suffix: '_camera_link' # this now comes from the namespace + stag_camera_link
-      trigger_calibration_once: True
+      trigger_calibration_once: False
       minimum_calibration_markers: 2
 
   mqtt_forwarder:

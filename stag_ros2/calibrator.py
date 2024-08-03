@@ -61,7 +61,7 @@ class Calibrator(Node):
             # Save pose to dictionary
             if marker['id'] not in self.absolute_markers:
                 self.absolute_markers[marker['id']] = dict()
-            self.absolute_markers[marker['id']]['pose'] = pose
+            #self.absolute_markers[marker['id']]['pose'] = pose
             self.absolute_markers[marker['id']] = pose
 
         self.relative_markers = dict()
@@ -88,10 +88,19 @@ class Calibrator(Node):
         qos = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
         self.camera_tf_pub = self.create_publisher(TransformStamped, t, qos)
 
+        t = 'absolute_pose_array'
+        qos = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
+        self.absolute_pose_array_pub = self.create_publisher(PoseArray, t, qos)
+        self.publish_absolute_poses()
 
 
-
-
+    def publish_absolute_poses(self):
+        # Publish positions of absolute markers
+        pa = PoseArray()
+        pa.header.stamp = self.get_clock().now().to_msg()
+        pa.header.frame_id = 'map'
+        pa.poses = [p for p in self.absolute_markers.values()]
+        self.absolute_pose_array_pub.publish(pa)
 
 
     def calibration_array_cb(self, msg):
@@ -129,7 +138,6 @@ class Calibrator(Node):
         scale = [1.0, 1.0, 1.0]
         shear = [0.0, 0.0, 0.0]
         angl = transforms3d.euler.quat2euler(rot)
-        self.get_logger().info(f'{angl}')
         rotation_mat = transforms3d.euler.euler2mat(angl[0], angl[1], angl[2])
         mat = transforms3d.affines.compose(T=trans, R=rotation_mat, Z=scale, S=shear)
         return mat
@@ -151,6 +159,7 @@ class Calibrator(Node):
 
     def trigger_cb(self, msg):
         self.get_logger().info('trigger received')
+        self.publish_absolute_poses()
 
         # We will use these lists to store individual transformations
         T_cam_map_list = []

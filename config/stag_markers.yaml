@@ -1,28 +1,32 @@
+###
+# Initial Pose Orientation Z -> Marker Pose Orientation X
+# Initial Pose Orientation W -> Marker Pose Orientation Y
+###
 # Used for localising the tf frame of the camera
 markers:
-  - id: 0
+  - id: 2
     hamming: 'HD19'
     radius: 0.115 #m
     pose:
       position:
-          x: 0.0
-          y: 0.0
+          x: -1.657
+          y: 0.062
           z: 0.0
       orientation:
           w: 0.0
-          x: 1.0
-          y: 0.0
+          x: -0.826
+          y: 0.563
           z: 0.0
-  - id: 1
+  - id: 3
     hamming: 'HD19'
     radius: 0.115 #m
     pose:
       position:
-          x: 0.144
-          y: 0.0
+          x: -0.997
+          y: 1.424
           z: 0.0
       orientation:
           w: 0.0
-          x: 1.0
-          y: 0.0
+          x: 0.566
+          y: 0.809
           z: 0.0
