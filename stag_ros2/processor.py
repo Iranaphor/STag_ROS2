@@ -135,6 +135,7 @@ class Processor(Node):
         # This code only works assuming markers are placed perpendicular
         # to direction of camera (i.e. are viewed straight on)
         PA = PoseArray()
+        PA.header.stamp = self.get_clock().now().to_msg()
         PA.header.frame_id = 'map'
         for id, values in marker_dict.items():
             corners = values['coordinates']
