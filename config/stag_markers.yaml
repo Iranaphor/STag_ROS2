@@ -1,30 +1,31 @@
 ###
-# Initial Pose Orientation Z -> Marker Pose Orientation X
-# Initial Pose Orientation W -> Marker Pose Orientation Y
-###
 # Used for localising the tf frame of the camera
 markers:
   - id: 2
-    hamming: 'HD19'
-    radius: 0.115 #m
+    hamming: 'HD19' #not used yet 
+    radius: 0.115 #m #not used yet
     normal: 'up'
-    yaw: 'down'
+    yaw: 'down' #not used yet 
     pose:
+      #position of marker centre
       position:
         x: -1.6633703708648682
         y: -0.03283071517944336
         z: 0.0
+      #rotation about centre
       orientation:
         x: 0.0
         y: 0.0
         z: -0.8355618598056386
         w: 0.5493963764333929
+
   - id: 3
-    hamming: 'HD19'
-    radius: 0.115 #m
+    hamming: 'HD19' #not used yet 
+    radius: 0.115 #m #not used yet 
     normal: 'up'
-    yaw: 'down'
+    yaw: 'down' #not used yet 
     pose:
+      #position of marker centre
       position:
         x: -0.9209842681884766
         y: 1.5723633766174316
@@ -34,80 +35,3 @@ markers:
         y: 0.0
         z: 0.5897166020249169
         w: 0.8076102582905852
-      flips:
-        x: ['1','x']
-        y: ['-1','y']
-        z: ['-1','z']
-        w: ['1','w']
-#184cm apart (but why 176?)
-
-
-
-#  - id: 22
-#    hamming: 'HD19'
-#    radius: 0.115 #m
-#    pose:
-#      position:
-#          x: -1.657
-#          y: 0.062
-#          z: 0.0
-#      orientation:
-#          w: 0.0
-#          x: -0.984
-#          y: 0.174
-#          z: 0.0
-# RViZ Z -> ABS X
-# RViZ W -> ABS Y
-
-
-
-
-
-
-
-  - id: 301
-    hamming: 'HD19'
-    radius: 0.115 #m
-    normal: 'up'
-    yaw: 'down'
-    pose:
-      position:
-        x: -0.7695693373680115
-        y: 0.6128433346748352
-        z: 0.0
-      orientation:
-        x: 0.0
-        y: 0.0
-        z: 0.995085749775774
-        w: 0.09901692074178799
-
-  - id: 302
-    hamming: 'HD19'
-    radius: 0.115 #m
-    normal: 'up'
-    yaw: 'down'
-    pose:
-      position:
-        x: -0.6495789289474487
-        y: 0.7311532497406006
-        z: 0.0
-      orientation:
-        x: 0.0
-        y: 0.0
-        z: 0.9917736722884056
-        w: 0.1280038396126067
-  - id: 303
-    hamming: 'HD19'
-    radius: 0.115 #m
-    normal: 'up'
-    yaw: 'down'
-    pose:
-      position:
-        x: -0.40664029121398926
-        y: 0.6493091583251953
-        z: 0.0
-      orientation:
-        x: 0.0
-        y: 0.0
-        z: 0.992766313146336
-        w: 0.12006268147026819

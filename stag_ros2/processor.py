@@ -57,6 +57,7 @@ class Processor(Node):
         self.pose_array2_pub = self.create_publisher(PoseArray, t, 10)
 
         if self.label_color_image:
+            self.get_logger().info(f"image pub")
             t = 'image_labelled'
             self.image_pub = self.create_publisher(Image, t, 10)
 

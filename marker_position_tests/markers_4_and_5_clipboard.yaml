@@ -1,0 +1,51 @@
+  ###
+# Initial Pose Orientation Z -> Marker Pose Orientation X
+# Initial Pose Orientation W -> Marker Pose Orientation Y
+###
+# Used for localising the tf frame of the camera
+markers:
+  - id: 4
+    hamming: 'HD19'
+    radius: 0.091 #m
+    pose:
+      #position of marker centre
+      position:
+          x: 0.0
+          y: 0.13
+          z: 0.0 ###
+      #rotation about centre
+      orientation:
+          w: 0.0 ###
+          x: 0.0
+          y: 0.99
+          z: 0.0 ###
+
+  - id: 5
+    hamming: 'HD19'
+    radius: 0.091 #m
+    pose:
+      #position of marker centre
+      position:
+          x: 0.0
+          y: 0.3
+          z: 0.0 ###
+      #rotation about centre
+      orientation:
+          w: 0.0 ###
+          x: -0.7
+          y: 0.7
+          z: 0.0 ###
+
+###
+# Map Green = North
+# rviz Green north = z.7 w.7 Rotate on Green = x.7 y.7
+# I need to instead rotate 180 degrees on the red/green axis, not only on the green axis
+# or we can rotate on gren axis 180, then blue axis -90
+# or rotate 90 on blue, then 180 on red
+
+# Correct pose of z.7 w.7
+# > Green = z-.99 w.0
+# > Red = z-.7 w.7  #BEST
+# > -Green = z.0 w.99
+# > -Red = z.7 w.7
+# With the id on the top left corner, orientation is straight down from the centre
