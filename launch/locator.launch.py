@@ -24,7 +24,7 @@ def launch_setup(context, *args, **kwargs):
     remapping = []
     ns = context.launch_configurations['namespace']
 
-    # MQTT Forwarder
+    # MQTT Receiver
     components += [Node(package='stag_ros2',
                        executable='mqtt_receiver.py',
                        name='mqtt_receiver',
