@@ -27,6 +27,7 @@ class Receiver(Node):
         self.declare_parameter('mqtt_encoding', rclpy.Parameter.Type.STRING)
         self.declare_parameter('mqtt_ns', rclpy.Parameter.Type.STRING)
         self.declare_parameter('robot_name', rclpy.Parameter.Type.STRING)
+        self.declare_parameter('pose_update_delay', rclpy.Parameter.Type.INTEGER)
         self.declare_parameter('markers_to_subscribe', rclpy.Parameter.Type.STRING_ARRAY)
 
         # Config
@@ -186,7 +187,8 @@ class Receiver(Node):
             return None
 
     def pose_update(self, msg):
-        if msg.header.stamp.sec - self.pwcs.header.stamp.sec < 2:
+        d = self.get_parameter('pose_update_delay').value
+        if msg.header.stamp.sec - self.pwcs.header.stamp.sec < d:
             return
         # Convert pose to upward facing marker
         ori = msg.pose.orientation
