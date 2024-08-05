@@ -36,34 +36,7 @@ class Calibrator(Node):
         self.declare_parameter('minimum_calibration_markers', rclpy.Parameter.Type.INTEGER)
 
         # Read config from yaml file
-        config_file = self.get_parameter('calibration_config_file').value
-        if config_file.startswith('package://'):
-            config_file = config_file[len('package://'):]
-            package_name, relative_path = config_file.split('/', 1)
-            package_path = get_package_share_directory(package_name)
-            config_file = os.path.join(package_path, relative_path)
-        with open(config_file, 'r') as file:
-            data = yaml.safe_load(file)
-
-        # Convert marker list into id dict
-        self.minimum_calibration_markers = self.get_parameter('minimum_calibration_markers').value
-        self.absolute_markers = dict()
-        for marker in data['markers']:
-            # Format pose object
-            pose = Pose()
-            pose.position.x = marker['pose']['position']['x']
-            pose.position.y = marker['pose']['position']['y']
-            pose.position.z = marker['pose']['position']['z']
-            pose.orientation.w = marker['pose']['orientation']['w']
-            pose.orientation.x = marker['pose']['orientation']['x']
-            pose.orientation.y = marker['pose']['orientation']['y']
-            pose.orientation.z = marker['pose']['orientation']['z']
-            # Save pose to dictionary
-            if marker['id'] not in self.absolute_markers:
-                self.absolute_markers[marker['id']] = dict()
-            #self.absolute_markers[marker['id']]['pose'] = pose
-            self.absolute_markers[marker['id']] = pose
-
+        self.load_absolute_poses()
         self.relative_markers = dict()
 
         ns = self.get_namespace() if self.get_namespace() != '/' else 'stag_ros2'
@@ -94,8 +67,62 @@ class Calibrator(Node):
         self.publish_absolute_poses()
 
 
+    def load_absolute_poses(self):
+        # Load config file
+        config_file = self.get_parameter('calibration_config_file').value
+        if config_file.startswith('package://'):
+            config_file = config_file[len('package://'):]
+            package_name, relative_path = config_file.split('/', 1)
+            package_path = get_package_share_directory(package_name)
+            config_file = os.path.join(package_path, relative_path)
+        with open(config_file, 'r') as file:
+            data = yaml.safe_load(file)
+
+        # Convert marker list into id dict
+        self.minimum_calibration_markers = self.get_parameter('minimum_calibration_markers').value
+        absolute_markers = dict()
+        for marker in data['markers']:
+            # Format pose object
+            pose = Pose()
+            pos = marker['pose']['position']
+            ori = marker['pose']['orientation']
+            if 'x' in pos: pose.position.x = pos['x']
+            if 'y' in pos: pose.position.y = pos['y']
+            if 'z' in pos: pose.position.z = pos['z']
+            if marker['normal'] == 'down':
+                if 'w' in ori: pose.orientation.w = ori['w']
+                if 'x' in ori: pose.orientation.x = ori['x']
+                if 'y' in ori: pose.orientation.y = ori['y']
+                if 'z' in ori: pose.orientation.z = ori['z']
+            elif marker['normal'] == 'up':
+                def rotate_180(w, x, y, z):
+                    w_rot, x_rot, y_rot, z_rot = 0,1,0,0
+
+                    # Quaternion multiplication (q * r)
+                    # q = w + xi + yj + zk
+                    # r = w_rot + x_rot*i + y_rot*j + z_rot*k
+                    new_w = w * w_rot - x * x_rot - y * y_rot - z * z_rot
+                    new_x = w * x_rot + x * w_rot + y * z_rot - z * y_rot
+                    new_y = w * y_rot - x * z_rot + y * w_rot + z * x_rot
+                    new_z = w * z_rot + x * y_rot - y * x_rot + z * w_rot
+
+                    return new_w, new_x, new_y, new_z
+                w,x,y,z = rotate_180(ori['w'],ori['x'],ori['y'],ori['z'])
+                pose.orientation.x = x
+                pose.orientation.y = y
+                pose.orientation.z = z
+                pose.orientation.w = w
+
+            # Save pose to dictionary
+            if marker['id'] not in absolute_markers:
+                absolute_markers[marker['id']] = dict()
+            absolute_markers[marker['id']] = pose
+        self.absolute_markers = absolute_markers
+
+
     def publish_absolute_poses(self):
         # Publish positions of absolute markers
+        self.load_absolute_poses()
         pa = PoseArray()
         pa.header.stamp = self.get_clock().now().to_msg()
         pa.header.frame_id = 'map'
@@ -158,7 +185,7 @@ class Calibrator(Node):
 
 
     def trigger_cb(self, msg):
-        self.get_logger().info('trigger received')
+        #self.get_logger().info('trigger received')
         self.publish_absolute_poses()
 
         # We will use these lists to store individual transformations

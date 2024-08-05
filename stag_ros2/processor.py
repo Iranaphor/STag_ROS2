@@ -143,16 +143,15 @@ class Processor(Node):
             dy = corners[1][1] - corners[0][1]
             angle_radians = np.arctan2(dy, dx)
             angle_degrees = round(np.degrees(angle_radians)+90,2)
-            #angle_degrees = angle_degrees if angle_degrees >=0 else 360 + angle_degrees
+            #if id == 2:
+            #    self.get_logger().info('m2='+str(angle_degrees))
             values['degrees'] = angle_degrees
-
 
             # Calculate the rolling filter
             if self.use_rolling_filter:
                 # Add latest pose
                 self.buffer[id]['rots'].append(angle_degrees)
                 # Remove oldest rotation
-                #self.get_logger().info(str(len(self.buffer[id]['rots'])))
                 if len(self.buffer[id]['rots']) > self.rolling_filter_len:
                     del self.buffer[id]['rots'][0]
                 # Determine iqr mean value
