@@ -14,9 +14,10 @@ import paho.mqtt.client as mqtt
 import rclpy
 from rclpy.node import Node
 
-from geometry_msgs.msg import PoseArray, Pose, PoseStamped, TransformStamped
-
+from geometry_msgs.msg import PoseArray, Pose, PoseStamped, TransformStamped, PoseWithCovarianceStamped
 from tf2_ros.static_transform_broadcaster import StaticTransformBroadcaster
+from tf2_ros import Buffer, TransformListener
+from tf2_geometry_msgs import do_transform_pose
 
 class Receiver(Node):
 
@@ -44,7 +45,16 @@ class Receiver(Node):
         t = 'stag/pose_array'
         self.pose_array_pub = self.create_publisher(PoseArray, t, 10)
 
+        # Set new pose
+        pwcs = PoseWithCovarianceStamped()
+        pwcs.header.stamp = self.get_clock().now().to_msg()
+        self.pwcs = pwcs
+        t = '/initialpose'
+        self.initialpose_pub = self.create_publisher(PoseWithCovarianceStamped, t, 10)
+
         # Setup
+        self.tf_buffer = Buffer()
+        self.listener = TransformListener(self.tf_buffer, self)
         self.broadcaster = StaticTransformBroadcaster(self)
         self.dumps = msgpack.dumps if self.mqtt_encoding == 'msgpack' else json.dumps
         self.loads = msgpack.loads if self.mqtt_encoding == 'msgpack' else json.loads
@@ -89,7 +99,7 @@ class Receiver(Node):
 
 
     def camera_tf_cb(self, tf_data):
-        self.get_logger().warn(f'camera tf received')
+        # self.get_logger().warn(f'camera tf received')
         # Publish tf for camera
         msg = TransformStamped()
         msg.header.stamp.sec = tf_data['header']['stamp']['sec']
@@ -142,6 +152,57 @@ class Receiver(Node):
         msg.pose.orientation.z = p_data['pose']['orientation']['z']
         # Publish full list of markers
         self.marker_publishers[marker_id].publish(msg)
+        if marker_id == "4":
+            self.pose_update(msg)
+
+    def rotate_180(self, w, x, y, z):
+        w_rot, x_rot, y_rot, z_rot = 0,1,0,0
+
+        # Quaternion multiplication (q * r)
+        # q = w + xi + yj + zk
+        # r = w_rot + x_rot*i + y_rot*j + z_rot*k
+        new_w = w * w_rot - x * x_rot - y * y_rot - z * z_rot
+        new_x = w * x_rot + x * w_rot + y * z_rot - z * y_rot
+        new_y = w * y_rot - x * z_rot + y * w_rot + z * x_rot
+        new_z = w * z_rot + x * y_rot - y * x_rot + z * w_rot
+
+        return new_w, new_x, new_y, new_z
+
+    def transform_pose(self, input_pose, from_frame, to_frame):
+        # Ensure that the pose is a PoseStamped object
+        pose_stamped = PoseStamped()
+        pose_stamped.pose = input_pose
+        pose_stamped.header.frame_id = from_frame
+        pose_stamped.header.stamp = self.get_clock().now().to_msg()
+        try:
+            # Wait for the necessary transformation to be available
+            t = rclpy.duration.Duration(seconds=1)
+            self.tf_buffer.can_transform(to_frame, from_frame, pose_stamped.header.stamp, timeout=t)
+            # Perform the transformation
+            output_pose_stamped = self.tf_buffer.transform(pose_stamped, to_frame)
+            return output_pose_stamped.pose
+        except Exception as e:
+            self.get_logger().error('Failed to transform pose: %s' % str(e))
+            return None
+
+    def pose_update(self, msg):
+        if msg.header.stamp.sec - self.pwcs.header.stamp.sec < 2:
+            return
+        # Convert pose to upward facing marker
+        ori = msg.pose.orientation
+        w,x,y,z = self.rotate_180(ori.w, ori.x, ori.y, ori.z)
+        msg.pose.orientation.x = x
+        msg.pose.orientation.y = y
+        msg.pose.orientation.z = z
+        msg.pose.orientation.w = w
+        transformed_pose = self.transform_pose(msg.pose, msg.header.frame_id, 'map')
+        #Format and publish new pose
+        pwcs = PoseWithCovarianceStamped()
+        pwcs.header = msg.header
+        pwcs.header.frame_id = 'map'
+        pwcs.pose.pose = transformed_pose
+        self.initialpose_pub.publish(pwcs)
+        self.pwcs = pwcs
 
 def main(args=None):
     rclpy.init(args=args)
