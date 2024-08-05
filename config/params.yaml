@@ -2,7 +2,7 @@
   processor:
     ros__parameters:
       hamming_distance: 19
-      marker_width: 0.115
+      marker_width: 0.091
       dfov: 68.5 #get from camera info?
       hfov: -0.0
       use_rolling_filter: true
