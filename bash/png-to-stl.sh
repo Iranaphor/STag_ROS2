@@ -23,9 +23,9 @@ show_help() {
     echo
     echo "Arguments:"
     echo "  input_directory     The directory containing PNG files to process."
-    echo "  max_thickness       Height of model from back to face (default: $default_max_thickness)."
+    echo "  max_thickness       Height of model from back to face in mm (default: $default_max_thickness)."
     echo "  thickness_ratio     Percentage of height to use for details (default: $default_thickness_ratio)."
-    echo "  square_size         Size of the square for the base in cm (default: $default_square_size)."
+    echo "  square_size         Size of the square for the base in mm (default: $default_square_size)."
     echo
     exit 0
 }
