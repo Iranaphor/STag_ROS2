@@ -2,13 +2,13 @@
 
 # USES:
 # @techreport{trace2scad20150104,
-# author={Henry Gordon Dietz},
-# title={{Trace2SCAD: Converting Images Into OpenSCAD Models}},
-# month={January},
-# year={2015},
-# institution={University of Kentucky},
-# howpublished={Aggregate.Org online technical report},
-# URL={http://aggregate.org/MAKE/TRACE2SCAD/}
+#     author={Henry Gordon Dietz},
+#     title={{Trace2SCAD: Converting Images Into OpenSCAD Models}},
+#     month={January},
+#     year={2015},
+#     institution={University of Kentucky},
+#     howpublished={Aggregate.Org online technical report},
+#     URL={http://aggregate.org/MAKE/TRACE2SCAD/}
 # }
 
 # Default values for parameters
@@ -23,9 +23,9 @@ show_help() {
     echo
     echo "Arguments:"
     echo "  input_directory     The directory containing PNG files to process."
-    echo "  max_thickness       Maximum thickness of the extrusion (default: $default_max_thickness)."
-    echo "  thickness_ratio     Ratio of thickness for extrusion (default: $default_thickness_ratio)."
-    echo "  square_size         Size of the square for the base (default: $default_square_size)."
+    echo "  max_thickness       Height of model from back to face (default: $default_max_thickness)."
+    echo "  thickness_ratio     Percentage of height to use for details (default: $default_thickness_ratio)."
+    echo "  square_size         Size of the square for the base in cm (default: $default_square_size)."
     echo
     exit 0
 }
