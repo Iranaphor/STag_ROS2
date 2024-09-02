@@ -38,6 +38,7 @@ class Receiver(Node):
 
         # Run
         self.robot_name = self.get_parameter('robot_name').value
+        self.tracker_marker = os.getenv('STAG_TRACKER_NUMBER')
         self.markers = self.get_parameter('markers_to_subscribe').value
         self.marker_publishers = dict()
         for marker in self.markers:
@@ -153,7 +154,7 @@ class Receiver(Node):
         msg.pose.orientation.z = p_data['pose']['orientation']['z']
         # Publish full list of markers
         self.marker_publishers[marker_id].publish(msg)
-        if marker_id == "4":
+        if marker_id == self.tracker_marker:
             self.pose_update(msg)
 
     def rotate_180(self, w, x, y, z):

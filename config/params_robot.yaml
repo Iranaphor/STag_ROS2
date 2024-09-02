@@ -3,5 +3,5 @@
     robot_name: 'bob'
     mqtt_encoding: 'json'
     mqtt_ns: 'stag_ros2'
-    markers_to_subscribe: ['4', '5']
+    markers_to_subscribe: ['4', '5', '6', '7']
     pose_update_delay: 1
