@@ -98,16 +98,47 @@ class Processor(Node):
         return
 
 
+    def merge_image_findings(self, image, hamming):
+        # detect markers
+        (corners, ids, rejected_corners) = stag.detectMarkers(image, hamming)
+        self.corners = self.corners + corners
+        self.ids = np.concatenate((self.ids, ids), axis=0)
+        self.rejected_corners = self.rejected_corners + rejected_corners
+        # detect inverted image
+        (corners, ids, rejected_corners) = stag.detectMarkers(255 - image, hamming)
+        self.corners = self.corners + corners
+        self.ids = np.concatenate((self.ids, ids), axis=0)
+        self.rejected_corners = self.rejected_corners + rejected_corners
+
     def image_cb(self, msg):
         image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+        self.image_size = (msg.height, msg.width)
+        hamming = int(self.hamming.split('HD')[-1])
+
+        # default values
+        self.corners = tuple()
+        self.ids = np.array([[]], dtype=int).transpose()
+        self.rejected_corners = tuple()
+
+        # TODO: add each filter as a rosparam toggle
 
         # detect markers
-        hamming = int(self.hamming.split('HD')[-1])
-        (corners, ids, rejected_corners) = stag.detectMarkers(image, hamming)
-        self.corners = corners
-        self.ids = ids
-        self.rejected_corners = rejected_corners
-        self.image_size = (msg.height, msg.width)
+        self.merge_image_findings(image, hamming)
+        #self.merge_image_findings(image, 11)
+        #self.merge_image_findings(image, 17)
+        #self.merge_image_findings(image, 23)
+
+        # test all three chanels (as bgr)
+        b, g, r = image[:, :, 0], image[:, :, 1], image[:, :, 2]
+        blue, green, red = cv2.merge([b, b, b]), cv2.merge([g, g, g]), cv2.merge([r, r, r])
+        self.merge_image_findings(r, hamming)
+        self.merge_image_findings(g, hamming)
+        self.merge_image_findings(b, hamming)
+
+        # save output for local reference
+        ids = self.ids
+        corners = self.corners
+        rejected_corners = self.rejected_corners
 
         if len(ids) > 0:
             marker_dict = dict()
@@ -150,12 +181,14 @@ class Processor(Node):
             values['degrees'] = angle_degrees
 
             # Calculate the rolling filter
+            self.use_rolling_filter = self.get_parameter('use_rolling_filter').value
             if self.use_rolling_filter:
+                self.rolling_filter_len = self.get_parameter('rolling_filter_len').value
                 # Add latest pose
                 self.buffer[id]['rots'].append(angle_degrees)
                 # Remove oldest rotation
                 if len(self.buffer[id]['rots']) > self.rolling_filter_len:
-                    del self.buffer[id]['rots'][0]
+                    del self.buffer[id]['rots'][:-self.rolling_filter_len]
                 # Determine iqr mean value
                 angle_degrees = np.median(np.array(self.buffer[id]['rots']))
 
