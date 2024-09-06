@@ -53,8 +53,9 @@ class Processor(Node):
         self.image_size = None
 
 
-        self.use_high_capacity_marker_detection = True #rosparam
-        self.use_enhanced_contrast_detection = True #rosparam
+        self.use_high_capacity_marker_detection = False #rosparam
+        self.use_enhanced_contrast_detection = False #rosparam
+        self.overlay_proximity = 30 #rosparam
 
         self.label_color_image = self.get_parameter('label_color_image').value
         self.label_depth_image = self.get_parameter('label_depth_image').value
@@ -139,7 +140,7 @@ class Processor(Node):
                     slice['m'] += []
 
         # Detemine if there are overlapping boxes
-        p = 30 #proximity in px
+        p = self.overlay_proximity #proximity in px
         markers = []
         for i,rm in enumerate(data['r']['m']):
 
