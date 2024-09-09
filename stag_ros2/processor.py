@@ -18,7 +18,7 @@ import stag
 import rclpy
 from rclpy.node import Node
 
-from std_msgs.msg import String
+from std_msgs.msg import String, Empty
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import PoseArray, Pose, PoseStamped
 
@@ -56,6 +56,12 @@ class Processor(Node):
         self.use_high_capacity_marker_detection = False #rosparam
         self.use_enhanced_contrast_detection = False #rosparam
         self.overlay_proximity = 30 #rosparam
+
+        self.only_process_image_on_tigger = True #rosparam
+
+        self.process_image_trigger = True
+        t = 'trigger_processor'
+        self.trigger_sub = self.create_subscription(Empty, t, self.trigger_cb, 10)
 
         self.label_color_image = self.get_parameter('label_color_image').value
         self.label_depth_image = self.get_parameter('label_depth_image').value
@@ -128,7 +134,7 @@ class Processor(Node):
 
 
 
-    def merge_overlays(self, data):
+    def merge_overlays(self, data, hamming):
 
         # Get centrpoints of each bounding box
         for slice in data.values():
@@ -168,29 +174,40 @@ class Processor(Node):
         # Convert triple marker ids to joined ones
         combined_markers = []
         for m in markers:
-            sr = m['r'][0]
-            sg = m['g'][0]
-            sb = m['b'][0]
+            mr = m['r'][0]
+            mg = m['g'][0]
+            mb = m['b'][0]
 
-            # Prime index
-            rpi = sr*3+0
-            gpi = sg*3+1
-            bpi = sb*3+2
+            # Prime method: (deprecated)
+            ## Prime index
+            #rpi = mr*3+0
+            #gpi = mg*3+1
+            #bpi = mb*3+2
+            #
+            ## Calculate prime value
+            #rp = sympy.prime(rpi) if rpi != 0 else 1
+            #gp = sympy.prime(gpi)
+            #bp = sympy.prime(bpi)
+            #uuid = rp * gp * bp
+            #
+            ## Log Output
+            #s = f"UUID: SliceID({sr},{sg},{sb}), PrimeIndex({rpi},{gpi},{bpi}), Prime({rp},{gp},{bp}), UUID({uuid})"
 
-            # Calculate prime value
-            rp = sympy.prime(rpi) if rpi != 0 else 1
-            gp = sympy.prime(gpi)
-            bp = sympy.prime(bpi)
+            # Scaled Bits
+            sr = mr * (hamming[0]**0)
+            sg = mg * (hamming[1]**1)
+            sb = mb * (hamming[2]**2)
+            uuid = sr + sg + bg
 
             # Log Output
-            s = f"UUID: SliceID({sr},{sg},{sb}), PrimeIndex({rpi},{gpi},{bpi}), Prime({rp},{gp},{bp}), UUID({rp*gp*bp})"
+            s = f"UUID: MarkerID({mr},{mg},{mb}), SliceID({sr},{sg},{sb}), UUID({uuid})"
             if sr == sg == sg:
                 self.get_logger().warn(s)
             else:
                 self.get_logger().error(s)
 
             # Save Output
-            combined_markers += [{'uuid':rp*gp*bp, 'corners':m['corners']}]
+            combined_markers += [{'uuid':uuid, 'corners':m['corners']}]
 
         # Add combined markers to the detection result
         corners = tuple()
@@ -204,7 +221,17 @@ class Processor(Node):
         self.ids = np.concatenate((self.ids, ids), axis=0)
 
 
+    def trigger_cb(self, msg):
+        self.process_image_trigger = True
+
+
     def image_cb(self, msg):
+        # Only trigger processing when commanded
+        if self.obly_process_image_on_trigger:
+            if not self.process_image_trigger:
+                return
+            self.process_image_trigger = False
+
         image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
         self.image_size = (msg.height, msg.width)
         hamming = int(self.hamming.split('HD')[-1])
@@ -232,7 +259,7 @@ class Processor(Node):
             data['r']['c'], data['r']['i'], data['r']['r'] = self.merge_image_findings(r, hamming, save=False)
             data['g']['c'], data['g']['i'], data['g']['r'] = self.merge_image_findings(g, hamming, save=False)
             data['b']['c'], data['b']['i'], data['b']['r'] = self.merge_image_findings(b, hamming, save=False)
-            self.merge_overlays(data)
+            self.merge_overlays(data, [hamming, hamming, hamming])
 
         # save output for local reference
         ids = self.ids
