@@ -40,16 +40,16 @@ markers:
     hamming: 'HD19' #not used yet 
     radius: 0.115 #m #not used yet 
     normal: 'up'
-    yaw: 'down' #not used yet 
+    yaw: 'down' #not used yet
     pose:
       #position of marker centre
       position:
-        x: -0.5009505748748779
-        y: 0.36231449246406555
+        x: -0.38596752285957336
+        y: -0.5592780113220215
         z: 0.0
       #rotation about centre
       orientation:
         x: 0.0
         y: 0.0
-        z: -0.1976286086372984
-        w: 0.9802769675189179
+        z: -0.8311519367573663
+        w: 0.5560453740698496

@@ -8,15 +8,17 @@
 
 import math
 import numpy as np
+import sympy
 import cv2
 from cv_bridge import CvBridge
+from statistics import mean
 
 import stag
 
 import rclpy
 from rclpy.node import Node
 
-from std_msgs.msg import String
+from std_msgs.msg import String, Empty
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import PoseArray, Pose, PoseStamped
 
@@ -50,6 +52,26 @@ class Processor(Node):
         self.rejected_corners = None
         self.image_size = None
 
+
+        self.overlay_proximity = 30 #rosparam
+
+        a=0
+
+        if a == 0:
+            self.use_high_capacity_marker_detection = True #rosparam
+            self.use_enhanced_contrast_detection = False #rosparam
+            self.hamming = 'HD21'
+        else:
+            self.use_high_capacity_marker_detection = False #rosparam
+            self.use_enhanced_contrast_detection = False #rosparam
+            self.hamming = 'HD15'
+
+        self.only_process_image_on_trigger = False #rosparam
+
+        self.process_image_trigger = True
+        t = 'trigger_processor'
+        self.trigger_sub = self.create_subscription(Empty, t, self.trigger_cb, 10)
+
         self.label_color_image = self.get_parameter('label_color_image').value
         self.label_depth_image = self.get_parameter('label_depth_image').value
 
@@ -57,7 +79,6 @@ class Processor(Node):
         self.pose_array2_pub = self.create_publisher(PoseArray, t, 10)
 
         if self.label_color_image:
-            self.get_logger().info(f"image pub")
             t = 'image_labelled'
             self.image_pub = self.create_publisher(Image, t, 10)
 
@@ -98,16 +119,153 @@ class Processor(Node):
         return
 
 
+    def merge_image_findings(self, image, hamming, save=True):
+        # detect markers
+        (corners1, ids1, rejected_corners1) = stag.detectMarkers(image, hamming)
+        if save:
+            self.corners = self.corners + corners1
+            self.ids = np.concatenate((self.ids, ids1), axis=0)
+            self.rejected_corners = self.rejected_corners + rejected_corners1
+
+        # Return early if not allowing flipped images
+        if self.use_enhanced_contrast_detection == False:
+            return corners1, ids1, rejected_corners1
+
+        # detect inverted image
+        (corners2, ids2, rejected_corners2) = stag.detectMarkers(255 - image, hamming)
+        if save:
+            self.corners = self.corners + corners2
+            self.ids = np.concatenate((self.ids, ids2), axis=0)
+            self.rejected_corners = self.rejected_corners + rejected_corners2
+
+        # return findings
+        return corners1 + corners2, np.concatenate((ids1, ids2), axis=0), rejected_corners1 + rejected_corners2
+
+
+
+    def merge_overlays(self, data, hamming):
+
+        # Get centrpoints of each bounding box
+        for slice in data.values():
+            slice['m'] = []
+            for c in slice['c']:
+                if len(c) > 0:
+                    slice['m'] += [[round(mean(c[0][:,0])), round(mean(c[0][:,1]))]]
+                else:
+                    slice['m'] += []
+
+        # Detemine if there are overlapping boxes
+        p = self.overlay_proximity #proximity in px
+        markers = []
+        for i,rm in enumerate(data['r']['m']):
+
+            # Check if Green is overlapping with Red
+            r_g = []
+            for gm in data['g']['m']:
+                r_g += [abs(gm[0] - rm[0]) <= p and abs(gm[1] - rm[1]) <= p]
+                #TODO: instead, check proximity of all four corners
+
+            # Check if Blue is overlapping with Red
+            r_b = []
+            for bm in data['b']['m']:
+                r_b += [abs(bm[0] - rm[0]) <= p and abs(bm[1] - rm[1]) <= p]
+
+            # Check if there were overlaps
+            if any(r_g) and any(r_b):
+                ri = data['r']['i'][i]
+                gi = data['g']['i'][r_g.index(True)]
+                bi = data['b']['i'][r_b.index(True)]
+
+                # Add marker if they are not the same in all slices
+                #if ri == gi == bi: continue Use to only use markers of different hues i.e. (1,1,1) not allowed
+                markers += [{'r':ri, 'g':gi, 'b':bi, 'corners':data['r']['c'][i]}]
+
+        # Convert triple marker ids to joined ones
+        combined_markers = []
+        for m in markers:
+            mr = m['r'][0]
+            mg = m['g'][0]
+            mb = m['b'][0]
+
+            file_lengths = {23:6, 21:12, 19:38, 17:157, 15:766, 13:2884, 11:22335}
+
+            # Scaled Bits
+            sr = mr * (file_lengths[hamming[0]]**0)
+            sg = mg * (file_lengths[hamming[1]]**1)
+            sb = mb * (file_lengths[hamming[2]]**2)
+            uuid = sr + sg + sb
+
+            # Log Output
+            s = f"UUID: MarkerID({mr},{mg},{mb}), SliceID({sr},{sg},{sb}), UUID({uuid})"
+            if sr == sg == sb:
+                self.get_logger().warn(s)
+            else:
+                self.get_logger().error(s)
+
+            # Save Output
+            combined_markers += [{'uuid':uuid, 'corners':m['corners']}]
+
+        # Add combined markers to the detection result
+        corners = tuple()
+        ids = np.array([[]], dtype=int).transpose()
+        for m in combined_markers:
+            corners = corners + (m['corners'],)
+            u = np.array([[m['uuid']]], dtype=int).transpose()
+            ids = np.concatenate((ids, u), axis=0)
+
+        self.corners = self.corners + corners
+        self.ids = np.concatenate((self.ids, ids), axis=0)
+
+
+    def trigger_cb(self, msg):
+        self.process_image_trigger = True
+
+
     def image_cb(self, msg):
+        # Only trigger processing when commanded
+        if self.only_process_image_on_trigger:
+            if not self.process_image_trigger:
+                return
+            self.process_image_trigger = False
+
         image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+        self.image_size = (msg.height, msg.width)
+        hamming = int(self.hamming.split('HD')[-1])
+
+        # default values
+        self.corners = tuple()
+        self.ids = np.array([[]], dtype=int).transpose()
+        self.rejected_corners = tuple()
+
+        # TODO: add each filter as a rosparam toggle
 
         # detect markers
-        hamming = int(self.hamming.split('HD')[-1])
-        (corners, ids, rejected_corners) = stag.detectMarkers(image, hamming)
-        self.corners = corners
-        self.ids = ids
-        self.rejected_corners = rejected_corners
-        self.image_size = (msg.height, msg.width)
+        #if self.use_high_capacity_marker_detection == False:
+        #    ic, ii, ir = self.merge_image_findings(image, hamming)
+
+        #ic, ii, ir = self.merge_image_findings(image, 11)
+        #ic, ii, ir = self.merge_image_findings(image, 13)
+        #ic, ii, ir = self.merge_image_findings(image, 15)
+        #ic, ii, ir = self.merge_image_findings(image, 17)
+        ic, ii, ir = self.merge_image_findings(image, 19)
+        #ic, ii, ir = self.merge_image_findings(image, 21)
+        #ic, ii, ir = self.merge_image_findings(image, 23)
+
+        # test all three chanels (as bgr)
+        #hamming=19
+        #if self.use_high_capacity_marker_detection == True:
+        #    b, g, r = image[:, :, 0], image[:, :, 1], image[:, :, 2]
+        #    blue, green, red = cv2.merge([b, b, b]), cv2.merge([g, g, g]), cv2.merge([r, r, r])
+        #    data = { 'r':dict(), 'g':dict(), 'b':dict() }
+        #    data['r']['c'], data['r']['i'], data['r']['r'] = self.merge_image_findings(r, hamming, save=False)
+        #    data['g']['c'], data['g']['i'], data['g']['r'] = self.merge_image_findings(g, hamming, save=False)
+        #    data['b']['c'], data['b']['i'], data['b']['r'] = self.merge_image_findings(b, hamming, save=False)
+        #    self.merge_overlays(data, [hamming, hamming, hamming])
+
+        # save output for local reference
+        ids = self.ids
+        corners = self.corners
+        rejected_corners = self.rejected_corners
 
         if len(ids) > 0:
             marker_dict = dict()
@@ -122,7 +280,7 @@ class Processor(Node):
         if self.label_color_image:
             # draw detected markers with ids
             stag.drawDetectedMarkers(image, corners, ids)
-            stag.drawDetectedMarkers(image, rejected_corners, border_color=(255, 0, 0))
+            #stag.drawDetectedMarkers(image, rejected_corners, border_color=(255, 0, 0))
 
             # save resulting image
             ros_image = self.bridge.cv2_to_imgmsg(image, encoding="passthrough")
@@ -130,8 +288,6 @@ class Processor(Node):
 
 
     def publish_cam_relative_pose(self, marker_dict, marker_width):
-        #self.get_logger().info(str(marker_dict))
-
         # This code only works assuming markers are placed perpendicular
         # to direction of camera (i.e. are viewed straight on)
         PA = PoseArray()
@@ -150,12 +306,14 @@ class Processor(Node):
             values['degrees'] = angle_degrees
 
             # Calculate the rolling filter
+            self.use_rolling_filter = self.get_parameter('use_rolling_filter').value
             if self.use_rolling_filter:
+                self.rolling_filter_len = self.get_parameter('rolling_filter_len').value
                 # Add latest rotation
                 self.buffer[id]['rots'].append(angle_degrees)
                 # Remove oldest rotation
                 if len(self.buffer[id]['rots']) > self.rolling_filter_len:
-                    del self.buffer[id]['rots'][0]
+                    del self.buffer[id]['rots'][:-self.rolling_filter_len]
                 # Determine iqr mean value
                 angle_degrees = np.median(np.array(self.buffer[id]['rots']))
 
