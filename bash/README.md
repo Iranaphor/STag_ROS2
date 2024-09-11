@@ -28,7 +28,7 @@ cd .../stag_ros2/bash/
 
 Determine the directory containing the markers:
 ```
-marker_dir = ~/path/to/markers/directory/HD19/
+marker_dir=~/path/to/markers/directory/HD19/
 ```
 
 Run the script, passing in the directory of the markers and any additional arguments.

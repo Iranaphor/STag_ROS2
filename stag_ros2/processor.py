@@ -151,7 +151,7 @@ class Processor(Node):
 
             # Calculate the rolling filter
             if self.use_rolling_filter:
-                # Add latest pose
+                # Add latest rotation
                 self.buffer[id]['rots'].append(angle_degrees)
                 # Remove oldest rotation
                 if len(self.buffer[id]['rots']) > self.rolling_filter_len:
