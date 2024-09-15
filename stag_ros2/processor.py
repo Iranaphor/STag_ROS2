@@ -55,16 +55,9 @@ class Processor(Node):
 
         self.overlay_proximity = 30 #rosparam
 
-        a=0
-
-        if a == 0:
-            self.use_high_capacity_marker_detection = True #rosparam
-            self.use_enhanced_contrast_detection = False #rosparam
-            self.hamming = 'HD21'
-        else:
-            self.use_high_capacity_marker_detection = False #rosparam
-            self.use_enhanced_contrast_detection = False #rosparam
-            self.hamming = 'HD15'
+        self.use_high_capacity_marker_detection = False #rosparam
+        self.use_enhanced_contrast_detection = True #rosparam
+        self.hamming = 'HD19'
 
         self.only_process_image_on_trigger = False #rosparam
 
@@ -240,27 +233,26 @@ class Processor(Node):
         # TODO: add each filter as a rosparam toggle
 
         # detect markers
-        #if self.use_high_capacity_marker_detection == False:
-        #    ic, ii, ir = self.merge_image_findings(image, hamming)
+        if self.use_high_capacity_marker_detection == False:
+            ic, ii, ir = self.merge_image_findings(image, hamming)
 
         #ic, ii, ir = self.merge_image_findings(image, 11)
         #ic, ii, ir = self.merge_image_findings(image, 13)
         #ic, ii, ir = self.merge_image_findings(image, 15)
         #ic, ii, ir = self.merge_image_findings(image, 17)
-        ic, ii, ir = self.merge_image_findings(image, 19)
+        #ic, ii, ir = self.merge_image_findings(image, 19)
         #ic, ii, ir = self.merge_image_findings(image, 21)
         #ic, ii, ir = self.merge_image_findings(image, 23)
 
         # test all three chanels (as bgr)
-        #hamming=19
-        #if self.use_high_capacity_marker_detection == True:
-        #    b, g, r = image[:, :, 0], image[:, :, 1], image[:, :, 2]
-        #    blue, green, red = cv2.merge([b, b, b]), cv2.merge([g, g, g]), cv2.merge([r, r, r])
-        #    data = { 'r':dict(), 'g':dict(), 'b':dict() }
-        #    data['r']['c'], data['r']['i'], data['r']['r'] = self.merge_image_findings(r, hamming, save=False)
-        #    data['g']['c'], data['g']['i'], data['g']['r'] = self.merge_image_findings(g, hamming, save=False)
-        #    data['b']['c'], data['b']['i'], data['b']['r'] = self.merge_image_findings(b, hamming, save=False)
-        #    self.merge_overlays(data, [hamming, hamming, hamming])
+        if self.use_high_capacity_marker_detection == True:
+            b, g, r = image[:, :, 0], image[:, :, 1], image[:, :, 2]
+            blue, green, red = cv2.merge([b, b, b]), cv2.merge([g, g, g]), cv2.merge([r, r, r])
+            data = { 'r':dict(), 'g':dict(), 'b':dict() }
+            data['r']['c'], data['r']['i'], data['r']['r'] = self.merge_image_findings(r, hamming, save=False)
+            data['g']['c'], data['g']['i'], data['g']['r'] = self.merge_image_findings(g, hamming, save=False)
+            data['b']['c'], data['b']['i'], data['b']['r'] = self.merge_image_findings(b, hamming, save=False)
+            self.merge_overlays(data, [hamming, hamming, hamming])
 
         # save output for local reference
         ids = self.ids
@@ -280,7 +272,7 @@ class Processor(Node):
         if self.label_color_image:
             # draw detected markers with ids
             stag.drawDetectedMarkers(image, corners, ids)
-            #stag.drawDetectedMarkers(image, rejected_corners, border_color=(255, 0, 0))
+            stag.drawDetectedMarkers(image, rejected_corners, border_color=(255, 0, 0))
 
             # save resulting image
             ros_image = self.bridge.cv2_to_imgmsg(image, encoding="passthrough")
