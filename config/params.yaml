@@ -15,7 +15,7 @@
       #merge_option_1: 'modal'
       merge_option_1: 'average'
       #merge_option_1: 'median'
-      merge_option_2: 'none'
+      merge_option_2: 'binary'
 
       # For camera calibration
       dfov: 68.5 #get from camera info?
