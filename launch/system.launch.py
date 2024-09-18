@@ -51,7 +51,8 @@ def launch_setup(context, *args, **kwargs):
                         name='processor',
                         namespace=context.launch_configurations['namespace'],
                         remappings=remapping,
-                        parameters=[params_file])]
+                        parameters=[params_file],
+                        output='screen')]
 
     # Calibrator
     components += [Node(package='stag_ros2',
