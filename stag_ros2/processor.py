@@ -76,6 +76,8 @@ class Processor(Node):
         self.process_image_trigger = True
         t = 'trigger_processor'
         self.trigger_sub = self.create_subscription(Empty, t, self.trigger_cb, 10)
+        t = 'input_file'
+        self.input_file_sub = self.create_subscription(String, t, self.input_file_cb, 10)
 
         # For rendering
         self.label_color_image = self.get_parameter('label_color_image').value
@@ -217,6 +219,14 @@ class Processor(Node):
     def trigger_cb(self, msg):
         self.process_image_trigger = True
 
+    def input_file_cb(self, msg):
+        # Read the image using OpenCV and convert to Image
+        image = cv2.imread(msg.data)
+        if image is None:
+            self.get_logger().error(f"Failed to load image from {self.image_file_path}")
+            return
+        image_msg = self.bridge.cv2_to_imgmsg(image, encoding="bgr8")
+        self.image_cb(image_msg)
 
     def image_cb(self, msg):
 
