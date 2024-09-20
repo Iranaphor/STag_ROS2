@@ -18,7 +18,7 @@ import stag
 import rclpy
 from rclpy.node import Node
 
-from std_msgs.msg import String, Empty
+from std_msgs.msg import String, Empty, UInt64
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import PoseArray, Pose, PoseStamped
 
@@ -82,6 +82,9 @@ class Processor(Node):
         # For rendering
         self.label_color_image = self.get_parameter('label_color_image').value
         self.label_depth_image = self.get_parameter('label_depth_image').value
+
+        t = 'ids'
+        self.ids_pub = self.create_publisher(UInt64, t, 10)
 
         t = 'calibration_array'
         self.pose_array2_pub = self.create_publisher(PoseArray, t, 10)
@@ -189,7 +192,7 @@ class Processor(Node):
             mg = m['g'][0]
             mb = m['b'][0]
 
-            file_lengths = {23:6, 21:12, 19:38, 17:157, 15:766, 13:2884, 11:22335}
+            file_lengths = {'23':6, '21':12, '19':38, '17':157, '15':766, '13':2884, '11':22335}
 
             # Scaled Bits
             sr = mr * (file_lengths[hamming[0]]**0)
@@ -246,6 +249,7 @@ class Processor(Node):
         self.rejected_corners = tuple()
 
         # TODO: Define marker set "temporarilly"
+        self.marker_set = self.get_parameter('marker_set').value
         #self.marker_set = 'HD19'
         #self.marker_set = 'HG19'
         #self.marker_set = 'HC19'
@@ -337,9 +341,14 @@ class Processor(Node):
         corners = self.corners
         rejected_corners = self.rejected_corners
 
-
         # Send marker dictionary to determine the marker poses relative to the camera
         if len(ids) > 0:
+
+            # Publish simple list of detected ids
+            U = UInt64()
+            U.data = int(ids[0])
+            self.ids_pub.publish(U)
+
             marker_dict = dict()
             for i in range(len(ids)):
                 marker_dict[ids[i][0]] = {'coordinates': corners[i][0].tolist()}

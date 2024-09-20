@@ -51,8 +51,7 @@ def launch_setup(context, *args, **kwargs):
                         name='processor',
                         namespace=context.launch_configurations['namespace'],
                         remappings=remapping,
-                        parameters=[params_file],
-                        output='screen')]
+                        parameters=[params_file])]
 
     # Calibrator
     components += [Node(package='stag_ros2',
@@ -131,7 +130,7 @@ def generate_launch_description():
 
     # Define MQTT Arguments
     desc='Whether to launch a local mosquitto broker'
-    LD.add_action(declare3('use_local_broker', desc, envvar='USE_LOCAL_BROKER', default='False'))
+    LD.add_action(declare3('use_local_broker', desc, envvar='USE_LOCAL_BROKER', default='false'))
     desc='IP address of the MQTT broker'
     LD.add_action(declare3('mqtt_broker_ip', desc, envvar='MQTT_BROKER_IP', default='0.0.0.0'))
     desc='Port of the MQTT broker'
@@ -143,7 +142,7 @@ def generate_launch_description():
 
     # Define Camera Arguments
     desc='Whether to launch rviz'
-    LD.add_action(declare3('use_rviz', desc, envvar='USE_RVIZ', default=True))
+    LD.add_action(declare3('use_rviz', desc, envvar='USE_RVIZ', default='true'))
 
     # Define Parameter Files
     desc='Paramater file for stag systems'

@@ -1,5 +1,5 @@
 import os
-from PIL import Image
+from PIL import Image, ImageDraw
 
 
 def convert_to_binary(img, threshold=128):
@@ -23,4 +23,18 @@ def list_files(directory):
     # Filter out directories, only keep files
     files = [entry for entry in entries if os.path.isfile(os.path.join(directory, entry)) and entry.endswith('.png')]
     return sorted(files)
+
+
+def draw_occlusion(image, x, y, radius, fill_value):
+
+    # Initialize drawing context
+    draw = ImageDraw.Draw(image)
+
+    # Define bounding box
+    bounding_box = [(x - radius, y - radius), (x + radius, y + radius)]
+
+    # Draw the circle
+    draw.ellipse(bounding_box, fill=fill_value)
+
+    return image
 
