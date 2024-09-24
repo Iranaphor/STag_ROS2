@@ -35,6 +35,12 @@ def main():
         required=True,
         help='Name of the output set.'
     )
+    parser.add_argument(
+        '--sample_size',
+        type=int,
+        required=False,
+        help='Number of markers to generate empty for All.'
+    )
 
     # Parse the arguments
     args = parser.parse_args()
@@ -81,7 +87,7 @@ def main():
     elif args.output_set.startswith('HG'):
         generate_hue_greyscale_markers(args.input_set, args.input_dir, args.output_dir)
     elif args.output_set.startswith('HO'):
-        generate_high_occlusion_markers(args.input_set, args.input_dir, args.output_dir)
+        generate_high_occlusion_markers(args.input_set, args.input_dir, args.output_dir, sample_size=args.sample_size)
 
 if __name__ == "__main__":
     #import os

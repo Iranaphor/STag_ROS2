@@ -32,8 +32,7 @@ def generate_masks(masks_dir, total_masks=10, min_size=100, max_size=100, total_
             fill_value = 255
             mask = utils.draw_occlusion(mask, x, y, r, fill_value)
 
-        total = len(str(q))
-        mt = str(m).zfill(len(str(q)))
+        mt = str(m).zfill(len(str(total_masks)))
         xt = str(x).zfill(len(str(w)))
         yt = str(y).zfill(len(str(h)))
         rt = str(r).zfill(len(str(max_size)))

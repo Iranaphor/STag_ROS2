@@ -18,7 +18,7 @@ import stag
 import rclpy
 from rclpy.node import Node
 
-from std_msgs.msg import String, Empty, UInt64
+from std_msgs.msg import String, Empty
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import PoseArray, Pose, PoseStamped
 
@@ -84,7 +84,7 @@ class Processor(Node):
         self.label_depth_image = self.get_parameter('label_depth_image').value
 
         t = 'ids'
-        self.ids_pub = self.create_publisher(UInt64, t, 10)
+        self.ids_pub = self.create_publisher(String, t, 10)
 
         t = 'calibration_array'
         self.pose_array2_pub = self.create_publisher(PoseArray, t, 10)
@@ -247,6 +247,7 @@ class Processor(Node):
         self.corners = tuple()
         self.ids = np.array([[]], dtype=int).transpose()
         self.rejected_corners = tuple()
+        data = { 'r':dict(), 'g':dict(), 'b':dict() }
 
         # TODO: Define marker set "temporarilly"
         self.marker_set = self.get_parameter('marker_set').value
@@ -278,7 +279,6 @@ class Processor(Node):
             hamming = int(self.marker_set.replace('HC',''))
 
             # Detect R, G, and B markers
-            data = { 'r':dict(), 'g':dict(), 'b':dict() }
             data['r']['c'], data['r']['i'], _ = self.merge_image_findings(r, hamming, save=False)
             data['g']['c'], data['g']['i'], _ = self.merge_image_findings(g, hamming, save=False)
             data['b']['c'], data['b']['i'], _ = self.merge_image_findings(b, hamming, save=False)
@@ -310,7 +310,6 @@ class Processor(Node):
             #print(f"Rectangles in R={len(r_reject)}, G={len(g_reject)}, B={len(b_reject)}")
 
             # 1. Merge bounding boxes from corners and rejected_corners
-            data = { 'r':dict(), 'g':dict(), 'b':dict() }
             data['r']['c'] = r_corners + r_reject
             data['g']['c'] = g_corners + g_reject
             data['b']['c'] = b_corners + b_reject
@@ -341,14 +340,19 @@ class Processor(Node):
         corners = self.corners
         rejected_corners = self.rejected_corners
 
+        # Publish simple list of detected ids
+        if len(ids) > 0:
+            S = String()
+            S.data = f"i{ids[0][0]}/c{len(self.corners)}/rc{len(self.rejected_corners)}"
+            if 'c' not in data['r']:
+                S.data += "/r0/g0/b0"
+            else:
+                S.data += f"/r{len(data['r']['c'])}/g{len(data['g']['c'])}/b{len(data['b']['c'])}"
+            self.ids_pub.publish(S)
+
+
         # Send marker dictionary to determine the marker poses relative to the camera
         if len(ids) > 0:
-
-            # Publish simple list of detected ids
-            U = UInt64()
-            U.data = int(ids[0])
-            self.ids_pub.publish(U)
-
             marker_dict = dict()
             for i in range(len(ids)):
                 marker_dict[ids[i][0]] = {'coordinates': corners[i][0].tolist()}

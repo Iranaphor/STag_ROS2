@@ -1,4 +1,5 @@
 import os
+import random
 from PIL import Image
 
 import stag_ros2.marker_generators.utils as utils
@@ -25,11 +26,15 @@ def combine_rgb_channels(red_file, green_file, blue_file, output_file):
     new_image.save(output_file)  # Save the combined image
 
 
-def generate_high_occlusion_markers(input_set, input_dir, output_dir):
+def generate_high_occlusion_markers(input_set, input_dir, output_dir, sample_size=-1):
 
     # Identify input files
     m = input_set.replace('HD','')
     files = utils.list_files(input_dir)
+
+    if sample_size > 0:
+        files = random.sample(files, sample_size)
+
     print(files)
 
     # Combine channels
