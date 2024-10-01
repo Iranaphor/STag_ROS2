@@ -250,8 +250,8 @@ class Processor(Node):
         data = { 'r':dict(), 'g':dict(), 'b':dict() }
 
         # TODO: Define marker set "temporarilly"
-        self.marker_set = self.get_parameter('marker_set').value
-        #self.marker_set = 'HD19'
+        #self.marker_set = self.get_parameter('marker_set').value
+        self.marker_set = 'HD19'
         #self.marker_set = 'HG19'
         #self.marker_set = 'HC19'
         #self.marker_set = 'HC192311'

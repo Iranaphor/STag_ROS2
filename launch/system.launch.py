@@ -74,12 +74,12 @@ def launch_setup(context, *args, **kwargs):
                         parameters=[params_file])]
 
     # MQTT Broker
-    if context.launch_configurations['use_local_broker'] == True:
+    if str(context.launch_configurations['use_local_broker']).lower() == "true":
         script_path = PathJoinSubstitution([PKG, 'bash/mosquitto_broker.sh'])
+        port = context.launch_configurations['mqtt_broker_port']
+        conf = context.launch_configurations['mqtt_broker_conf']
         components += [
-            ExecuteProcess(
-                cmd=['bash', script_path, context.launch_configurations['mqtt_broker_port']],
-                output='screen')
+            ExecuteProcess(cmd=['bash', script_path, port, conf], output='screen')
         ]
 
 
@@ -135,6 +135,9 @@ def generate_launch_description():
     LD.add_action(declare3('mqtt_broker_ip', desc, envvar='MQTT_BROKER_IP', default='0.0.0.0'))
     desc='Port of the MQTT broker'
     LD.add_action(declare3('mqtt_broker_port', desc, envvar='MQTT_BROKER_PORT', default='8883'))
+    conf = os.path.join(PKG, 'config', 'mosquitto.conf')
+    desc='Config path for the MQTT broker'
+    LD.add_action(declare3('mqtt_broker_conf', desc, envvar='MQTT_BROKER_CONF', default=conf))
 
     # Define Camera Arguments
     desc='Camera type to be used. Either usb_cam or realsense'

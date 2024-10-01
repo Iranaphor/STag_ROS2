@@ -3,7 +3,7 @@
     ros__parameters:
 
       # For marker detection
-      marker_set: 'HO23'
+      marker_set: 'HD19'
       marker_width: 0.115
       only_process_image_on_trigger: False
 
@@ -23,7 +23,7 @@
 
       # For position smoothing
       use_rolling_filter: true
-      rolling_filter_len: 15
+      rolling_filter_len: 10 #todo: change this to 0=false
 
       # For rendering
       label_color_image: true
