@@ -1,2 +1,12 @@
-stag-python==1.0.2
-tf-transformations==1.0.0
+ament-index-python==1.4.0
+cv-bridge==3.2.1
+geometry-msgs==4.2.4
+msgpack==1.0.3
+numpy==1.25.2
+rclpy==3.3.13
+sensor-msgs==4.2.4
+std-msgs==4.2.4
+sympy==1.9
+tf2-geometry-msgs==0.25.7
+transforms3d==0.4.2
+visualization-msgs==4.2.4

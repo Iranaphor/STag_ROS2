@@ -22,8 +22,11 @@
       hfov: -0.0
 
       # For position smoothing
-      use_rolling_filter: true
-      rolling_filter_len: 10 #todo: change this to 0=false
+      use_rolling_filter: false
+      rolling_filter_len: 10
+      rolling_filter_type: 'time' #time or frames
+      rolling_filter_timeout: 1.5
+      rolling_filter_function: 'mean'
 
       # For rendering
       label_color_image: true
