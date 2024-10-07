@@ -74,12 +74,12 @@ def launch_setup(context, *args, **kwargs):
                         parameters=[params_file])]
 
     # MQTT Broker
-    if context.launch_configurations['use_local_broker'] == True:
+    if str(context.launch_configurations['use_local_broker']).lower() == "true":
         script_path = PathJoinSubstitution([PKG, 'bash/mosquitto_broker.sh'])
+        port = context.launch_configurations['mqtt_broker_port']
+        conf = context.launch_configurations['mqtt_broker_conf']
         components += [
-            ExecuteProcess(
-                cmd=['bash', script_path, context.launch_configurations['mqtt_broker_port']],
-                output='screen')
+            ExecuteProcess(cmd=['bash', script_path, port, conf], output='screen')
         ]
 
 
@@ -130,11 +130,14 @@ def generate_launch_description():
 
     # Define MQTT Arguments
     desc='Whether to launch a local mosquitto broker'
-    LD.add_action(declare3('use_local_broker', desc, envvar='USE_LOCAL_BROKER', default='False'))
+    LD.add_action(declare3('use_local_broker', desc, envvar='USE_LOCAL_BROKER', default='false'))
     desc='IP address of the MQTT broker'
     LD.add_action(declare3('mqtt_broker_ip', desc, envvar='MQTT_BROKER_IP', default='0.0.0.0'))
     desc='Port of the MQTT broker'
     LD.add_action(declare3('mqtt_broker_port', desc, envvar='MQTT_BROKER_PORT', default='8883'))
+    conf = os.path.join(PKG, 'config', 'mosquitto.conf')
+    desc='Config path for the MQTT broker'
+    LD.add_action(declare3('mqtt_broker_conf', desc, envvar='MQTT_BROKER_CONF', default=conf))
 
     # Define Camera Arguments
     desc='Camera type to be used. Either usb_cam or realsense'
@@ -142,7 +145,7 @@ def generate_launch_description():
 
     # Define Camera Arguments
     desc='Whether to launch rviz'
-    LD.add_action(declare3('use_rviz', desc, envvar='USE_RVIZ', default=True))
+    LD.add_action(declare3('use_rviz', desc, envvar='USE_RVIZ', default='true'))
 
     # Define Parameter Files
     desc='Paramater file for stag systems'

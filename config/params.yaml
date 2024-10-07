@@ -1,12 +1,34 @@
 /**:
   processor:
     ros__parameters:
-      hamming_distance: 19
+
+      # For marker detection
+      marker_set: 'HD19'
       marker_width: 0.115
+      only_process_image_on_trigger: False
+
+      # For multi-channel marker detection
+      overlay_proximity: 30
+      #merge_option_1: 'none'
+      #merge_option_1: 'additive'
+      #merge_option_1: 'binary'
+      #merge_option_1: 'modal'
+      merge_option_1: 'average'
+      #merge_option_1: 'median'
+      merge_option_2: 'binary'
+
+      # For camera calibration
       dfov: 68.5 #get from camera info?
       hfov: -0.0
-      use_rolling_filter: true
-      rolling_filter_len: 15
+
+      # For position smoothing
+      use_rolling_filter: false
+      rolling_filter_len: 10
+      rolling_filter_type: 'time' #time or frames
+      rolling_filter_timeout: 1.5
+      rolling_filter_function: 'mean'
+
+      # For rendering
       label_color_image: true
       label_depth_image: false
 
