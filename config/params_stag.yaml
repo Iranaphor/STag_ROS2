@@ -34,7 +34,8 @@
 
   calibrator:
     ros__parameters:
-      calibration_config_file: 'package://stag_ros2/config/stag_markers.yaml'
+      calibration_config_file: 'package://environment_template/config/world/fiducial_markers.yaml'
+      #calibration_config_file: 'package://stag_ros2/config/stag_markers.yaml'
       trigger_calibration_once: False
       minimum_calibration_markers: 1
 

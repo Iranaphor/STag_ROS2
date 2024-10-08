@@ -81,7 +81,7 @@ class Calibrator(Node):
         # Convert marker list into id dict
         self.minimum_calibration_markers = self.get_parameter('minimum_calibration_markers').value
         absolute_markers = dict()
-        for marker in data['markers']:
+        for marker in data['stag_markers']:
             # Format pose object
             pose = Pose()
             pos = marker['pose']['position']
