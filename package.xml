@@ -23,6 +23,10 @@
 
   <depend>mosquitto</depend>
 
+  <!--<depend>cam_calibration</depend>-->
+  <!--<depend>environment_common</depend>-->
+  <!--<depend>environment_template</depend>-->
+
   <export>
     <build_type>ament_python</build_type>
   </export>

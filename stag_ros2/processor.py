@@ -44,6 +44,9 @@ class Processor(Node):
 
         self.declare_parameter('use_rolling_filter', rclpy.Parameter.Type.BOOL)
         self.declare_parameter('rolling_filter_len', rclpy.Parameter.Type.INTEGER)
+        self.declare_parameter('rolling_filter_type', rclpy.Parameter.Type.STRING)
+        self.declare_parameter('rolling_filter_timeout', rclpy.Parameter.Type.DOUBLE)
+        self.declare_parameter('rolling_filter_function', rclpy.Parameter.Type.STRING)
 
         self.declare_parameter('label_color_image', rclpy.Parameter.Type.BOOL)
         self.declare_parameter('label_depth_image', rclpy.Parameter.Type.BOOL)
@@ -58,6 +61,9 @@ class Processor(Node):
         # For pose filtering
         self.use_rolling_filter = self.get_parameter('use_rolling_filter').value
         self.rolling_filter_len = self.get_parameter('rolling_filter_len').value
+        self.rolling_filter_type = self.get_parameter('rolling_filter_type').value
+        self.rolling_filter_timeout = self.get_parameter('rolling_filter_timeout').value
+        self.rolling_filter_function = self.get_parameter('rolling_filter_function').value
         self.buffer = dict()
 
         # For handling detections
@@ -102,6 +108,37 @@ class Processor(Node):
 
         t = 'image_depth'
         self.depth_sub = self.create_subscription(Image, t, self.depth_cb, 10)
+
+        t = 'trigger_param_update'
+        self.param_sub = self.create_subscription(Empty, t, self.load_params, 1)
+
+
+    def load_params(self, msg):
+        self.get_logger().error(f'{self.dfov} from {self.hfov}')
+
+        # For marker detection
+        self.marker_set = self.get_parameter('marker_set').value
+        self.marker_width = self.get_parameter('marker_width').value
+        self.dfov = self.get_parameter('dfov').value
+        self.hfov = self.get_parameter('hfov').value
+
+        # For pose filtering
+        self.use_rolling_filter = self.get_parameter('use_rolling_filter').value
+        self.rolling_filter_len = self.get_parameter('rolling_filter_len').value
+        self.rolling_filter_type = self.get_parameter('rolling_filter_type').value
+        self.rolling_filter_function = self.get_parameter('rolling_filter_function').value
+
+        # For High-Capacity marker detection
+        self.overlay_proximity = int(self.get_parameter('overlay_proximity').value)
+        self.merge_option_1 = self.get_parameter('merge_option_1').value
+        self.merge_option_2 = self.get_parameter('merge_option_2').value
+
+        # For experimentation
+        self.only_process_image_on_trigger = bool(self.get_parameter('only_process_image_on_trigger').value)
+
+        # For rendering
+        self.label_color_image = self.get_parameter('label_color_image').value
+        self.label_depth_image = self.get_parameter('label_depth_image').value
 
 
     def configure_fov(self):
@@ -250,8 +287,8 @@ class Processor(Node):
         data = { 'r':dict(), 'g':dict(), 'b':dict() }
 
         # TODO: Define marker set "temporarilly"
-        self.marker_set = self.get_parameter('marker_set').value
-        #self.marker_set = 'HD19'
+        #self.marker_set = self.get_parameter('marker_set').value
+        self.marker_set = 'HD19'
         #self.marker_set = 'HG19'
         #self.marker_set = 'HC19'
         #self.marker_set = 'HC192311'
@@ -373,9 +410,19 @@ class Processor(Node):
     def publish_cam_relative_pose(self, marker_dict, marker_width):
         # This code only works assuming markers are placed perpendicular
         # to direction of camera (i.e. are viewed straight on)
+
+        # Prepare object to publish
         PA = PoseArray()
         PA.header.stamp = self.get_clock().now().to_msg()
         PA.header.frame_id = 'map'
+
+        # Load required ros2 params
+        #self.use_rolling_filter = self.get_parameter('use_rolling_filter').value
+        #self.rolling_filter_len = self.get_parameter('rolling_filter_len').value
+        #self.rolling_filter_type = self.get_parameter('rolling_filter_type').value
+        #self.rolling_filter_timeout = self.get_parameter('rolling_filter_timeout').value
+        #self.rolling_filter_function = self.get_parameter('rolling_filter_function').value
+
         for id, values in marker_dict.items():
             corners = values['coordinates']
 
@@ -389,16 +436,29 @@ class Processor(Node):
             values['degrees'] = angle_degrees
 
             # Calculate the rolling filter
-            self.use_rolling_filter = self.get_parameter('use_rolling_filter').value
             if self.use_rolling_filter:
-                self.rolling_filter_len = self.get_parameter('rolling_filter_len').value
+
                 # Add latest rotation
-                self.buffer[id]['rots'].append(angle_degrees)
-                # Remove oldest rotation
-                if len(self.buffer[id]['rots']) > self.rolling_filter_len:
-                    del self.buffer[id]['rots'][:-self.rolling_filter_len]
-                # Determine iqr mean value
-                angle_degrees = np.median(np.array(self.buffer[id]['rots']))
+                self.buffer[id]['rots'].append((angle_degrees,PA.header.stamp.secs))
+
+                # Process length-based filter
+                if self.filter_type == 'frames':
+                    # Remove oldest rotation
+                    if len(self.buffer[id]['rots']) > self.rolling_filter_len:
+                        del self.buffer[id]['rots'][:-self.rolling_filter_len]
+
+                # Process time-based filter
+                if self.filter_type == 'time':
+                    last = PA.header.stamp - self.rolling_filter_timeout
+                    # Remove oldest rotation
+                    self.buffer[id]['rots'] = [r for r in self.buffer[id]['rots'] if last < r[1]]
+
+                # Apply filtering function
+                buffer_d = np.array(self.buffer[id]['rots'][0])
+                if self.rolling_filter_function == 'mean':
+                    angle_degrees = np.mean(buffer_d)
+                if self.rolling_filter_function == 'median':
+                    angle_degrees = np.median(buffer_d)
 
 
             # Determine orientation

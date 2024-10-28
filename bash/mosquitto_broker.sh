@@ -1,7 +1,9 @@
 #!/bin/bash
 
-export port=$MQTT_BROKER_PORT
+export port=$1
+export conf=$2
 
-if [ "$port" -ne 1883 ]; then
-    mosquitto -v -p "$port"
-fi
+#echo $port
+#echo $conf
+#echo 'mosquitto -v -p "$port" -c "$conf"'
+mosquitto -v -p "$port" -c "$conf"

@@ -1,6 +1,6 @@
 ###
 # Used for localising the tf frame of the camera
-markers:
+stag_markers:
   - id: 2
     hamming: 'HD19' #not used yet 
     radius: 0.115 #m #not used yet

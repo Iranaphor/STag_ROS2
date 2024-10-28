@@ -3,7 +3,7 @@
     ros__parameters:
 
       # For marker detection
-      marker_set: 'HO23'
+      marker_set: 'HD19'
       marker_width: 0.115
       only_process_image_on_trigger: False
 
@@ -22,8 +22,11 @@
       hfov: -0.0
 
       # For position smoothing
-      use_rolling_filter: true
-      rolling_filter_len: 15
+      use_rolling_filter: false
+      rolling_filter_len: 10
+      rolling_filter_type: 'time' #time or frames
+      rolling_filter_timeout: 1.5
+      rolling_filter_function: 'mean'
 
       # For rendering
       label_color_image: true
@@ -31,7 +34,8 @@
 
   calibrator:
     ros__parameters:
-      calibration_config_file: 'package://stag_ros2/config/stag_markers.yaml'
+      calibration_config_file: 'package://environment_template/config/world/fiducial_markers.yaml'
+      #calibration_config_file: 'package://stag_ros2/config/stag_markers.yaml'
       trigger_calibration_once: False
       minimum_calibration_markers: 1
 
