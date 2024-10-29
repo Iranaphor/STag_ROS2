@@ -1,0 +1,23 @@
+/**:
+    ros__parameters:
+      video_device: "/dev/video2"  # Replace X with the correct device number for the IR camera
+      framerate: 30.0
+      io_method: "mmap"
+      frame_id: "ir_camera"
+      pixel_format: "YUYV"  # You need to confirm this from the supported formats
+      av_device_format: "YUV422P"
+      image_width: 640
+      image_height: 480
+      camera_name: "ir_test_camera"
+      camera_info_url: "package://usb_cam/config/camera_info.yaml"
+      brightness: -1
+      contrast: -1
+      saturation: -1
+      sharpness: -1
+      gain: -1
+      auto_white_balance: false  # Typically, IR cameras do not use white balance
+      white_balance: -1
+      autoexposure: true
+      exposure: -1  # Adjust based on output
+      autofocus: false
+      focus: -1

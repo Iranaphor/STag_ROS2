@@ -14,7 +14,7 @@
 # Default values for parameters
 default_max_thickness=1
 default_thickness_ratio=0.5
-default_square_size=20
+default_square_size=80
 
 # Function to display help message
 show_help() {
