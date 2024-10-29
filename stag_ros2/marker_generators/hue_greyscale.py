@@ -93,7 +93,7 @@ def generate_hue_greyscale_markers(input_set, input_dir, output_dir, colour=None
 
 if __name__ == '__main__':
     import os
-    input_set = '19'
+    input_set = '23'
     input_dir = f"{os.getenv('HOME')}/STag-Markers/standard/HD{input_set}/"
     output_dir = f"{os.getenv('HOME')}/STag-Markers/hue-greyscale/HG{input_set}/"
 
