@@ -33,7 +33,7 @@ def process_polygon(polygon, cv_image, join_method):
     if join_method == 'none':
         return cv_image
 
-    elif join_method == 'additive':
+    elif join_method == 'sum':
         # Sum the color channels for each pixel
         sum_pixels = np.sum(masked_pixels, axis=1)
         # Clip values to max 255 to prevent overflow

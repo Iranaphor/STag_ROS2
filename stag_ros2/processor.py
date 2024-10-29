@@ -99,6 +99,10 @@ class Processor(Node):
             t = 'image_labelled'
             self.image_pub = self.create_publisher(Image, t, 10)
 
+            self.image_pubR = self.create_publisher(Image, 'red', 10)
+            self.image_pubG = self.create_publisher(Image, 'green', 10)
+            self.image_pubB = self.create_publisher(Image, 'blue', 10)
+
         if self.label_depth_image:
             t = 'depth_labelled'
             self.depth_pub = self.create_publisher(Image, t, 10)
@@ -288,7 +292,7 @@ class Processor(Node):
 
         # TODO: Define marker set "temporarilly"
         #self.marker_set = self.get_parameter('marker_set').value
-        self.marker_set = 'HD19'
+        #self.marker_set = 'HD19'
         #self.marker_set = 'HG19'
         #self.marker_set = 'HC19'
         #self.marker_set = 'HC192311'
@@ -335,6 +339,7 @@ class Processor(Node):
         ####################################################################################
         # For High-Occlusion detection, merge polygons if overlapping, align the channels, detect ids
         elif self.marker_set.startswith('HO'):
+            self.get_logger().info(f'HO Detection Begun')
             # Seperate Image
             b, g, r = image[:, :, 0], image[:, :, 1], image[:, :, 2]
             blue, green, red = cv2.merge([b, b, b]), cv2.merge([g, g, g]), cv2.merge([r, r, r])
@@ -362,9 +367,9 @@ class Processor(Node):
                 image = process_polygon(polygon, image, join_method=self.merge_option_1)
                 image = process_polygon(polygon, image, join_method=self.merge_option_2)
 
-
             #   3. Pass corrected image back for detection again
             self.merge_image_findings(image, hamming)
+            self.get_logger().info(str(self.ids))
 
             # OPTION 2:
             #   3. Tidy them joined up
@@ -405,6 +410,16 @@ class Processor(Node):
             stag.drawDetectedMarkers(image, rejected_corners, border_color=(255, 0, 0))
             ros_image = self.bridge.cv2_to_imgmsg(image, encoding="passthrough")
             self.image_pub.publish(ros_image)
+
+            stag.drawDetectedMarkers(red, rejected_corners, border_color=(255, 0, 0))
+            ros_imageR = self.bridge.cv2_to_imgmsg(red, encoding="passthrough")
+            self.image_pubR.publish(ros_imageR)
+            stag.drawDetectedMarkers(green, rejected_corners, border_color=(255, 0, 0))
+            ros_imageG = self.bridge.cv2_to_imgmsg(green, encoding="passthrough")
+            self.image_pubG.publish(ros_imageG)
+            stag.drawDetectedMarkers(blue, rejected_corners, border_color=(255, 0, 0))
+            ros_imageB = self.bridge.cv2_to_imgmsg(blue, encoding="passthrough")
+            self.image_pubB.publish(ros_imageB)
 
 
     def publish_cam_relative_pose(self, marker_dict, marker_width):
