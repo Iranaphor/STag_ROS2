@@ -41,8 +41,8 @@ class Calibrator(Node):
 
         ns = self.get_namespace() if self.get_namespace() != '/' else 'stag_ros2'
         self.stag_camera_link = ns[1:].replace('/', '_')+'_camera_link'
-        self.get_logger().info(f'{ns}')
-        self.get_logger().info(f'{self.stag_camera_link}')
+        #self.get_logger().info(f'{ns}')
+        #self.get_logger().info(f'{self.stag_camera_link}')
 
         self.trigger_calibration_once = self.get_parameter('trigger_calibration_once').value
 

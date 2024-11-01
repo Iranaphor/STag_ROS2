@@ -88,6 +88,7 @@ class Processor(Node):
         # For rendering
         self.label_color_image = self.get_parameter('label_color_image').value
         self.label_depth_image = self.get_parameter('label_depth_image').value
+        self.label_rgb_images = False #TODO param
 
         t = 'ids'
         self.ids_pub = self.create_publisher(String, t, 10)
@@ -143,6 +144,7 @@ class Processor(Node):
         # For rendering
         self.label_color_image = self.get_parameter('label_color_image').value
         self.label_depth_image = self.get_parameter('label_depth_image').value
+        self.label_rgb_images = False #TODO param
 
 
     def configure_fov(self):
@@ -411,6 +413,9 @@ class Processor(Node):
             ros_image = self.bridge.cv2_to_imgmsg(image, encoding="passthrough")
             self.image_pub.publish(ros_image)
 
+        if self.label_rgb_images:
+            b, g, r = image[:, :, 0], image[:, :, 1], image[:, :, 2]
+            blue, green, red = cv2.merge([b, b, b]), cv2.merge([g, g, g]), cv2.merge([r, r, r])
             stag.drawDetectedMarkers(red, rejected_corners, border_color=(255, 0, 0))
             ros_imageR = self.bridge.cv2_to_imgmsg(red, encoding="passthrough")
             self.image_pubR.publish(ros_imageR)
