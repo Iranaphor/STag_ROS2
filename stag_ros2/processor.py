@@ -6,6 +6,7 @@
 # @date:
 # ----------------------------------
 
+import time
 import math
 import numpy as np
 import sympy
@@ -30,6 +31,14 @@ class Processor(Node):
     def __init__(self):
         super().__init__('processor')
         self.bridge = CvBridge()
+
+        # Add timing average estimates
+        self.formatting = []
+        self.preprocessing = []
+        self.detection = []
+        self.postprocessing = []
+        self.localisation = []
+        self.display_time = False
 
         self.declare_parameter('marker_set', rclpy.Parameter.Type.STRING)
         self.declare_parameter('marker_width', rclpy.Parameter.Type.DOUBLE)
@@ -275,6 +284,7 @@ class Processor(Node):
         self.image_cb(image_msg)
 
     def image_cb(self, msg):
+        t0 = time.time()
 
         # Only trigger processing when commanded
         if self.only_process_image_on_trigger:
@@ -302,63 +312,85 @@ class Processor(Node):
 
         ####################################################################################
         # Detect Standard HD markers
+        t_img = time.time()
         if self.marker_set.startswith('HD'):
             hamming = int(self.marker_set.replace('HD',''))
+
+            # No preprocessing
+            t_pre = time.time()
+
+            # Process image
             self.merge_image_findings(image, hamming)
+            t_det = time.time()
+
+            # No postprocessing
+            t_pos = time.time()
+
 
         ####################################################################################
         # Detect Greyscale markers
         elif self.marker_set.startswith('HG'):
             hamming = int(self.marker_set.replace('HG',''))
+
+            # Preprocessing to invert image
+            inverse = 255 - image
+            t_pre = time.time()
+
+            # Process images
             self.merge_image_findings(image, hamming)
-            self.merge_image_findings(255 - image, hamming)
+            self.merge_image_findings(inverse, hamming)
+            t_det = time.time()
+
+            # Postprocessing
+            t_pos = time.time()
 
         ####################################################################################
         # For High-Capacity detection, merge polygons if overlapping and decode detected ids
         elif self.marker_set.startswith('HC'):
-            # Seperate Image
+            hamming = int(self.marker_set.replace('HC',''))
+
+            # Preprocessing to seperate images
+            t_pre = time.time()
             b, g, r = image[:, :, 0], image[:, :, 1], image[:, :, 2]
             blue, green, red = cv2.merge([b, b, b]), cv2.merge([g, g, g]), cv2.merge([r, r, r])
-            hamming = int(self.marker_set.replace('HC',''))
+            t_pre = time.time()
 
             # Detect R, G, and B markers
             data['r']['c'], data['r']['i'], _ = self.merge_image_findings(r, hamming, save=False)
             data['g']['c'], data['g']['i'], _ = self.merge_image_findings(g, hamming, save=False)
             data['b']['c'], data['b']['i'], _ = self.merge_image_findings(b, hamming, save=False)
+            t_det = time.time()
 
-            # Merge detections across all three channels
+            # Postprocessing to merge detections across channels, identify hamming distance, and decode
             markers = self.merge_overlays(data)
-
-            # Determing hamming distance to use
             ids = self.marker_set.replace('HC','')
             hamming = [ids, ids, ids]
             if len(ids) == 6:
                 hamming = [ids[0:2],ids[2:4],ids[4:6]]
-
-            # Decode ids
             self.decode_high_capacity(hamming, markers)
+            t_pos = time.time()
 
         ####################################################################################
         # For High-Occlusion detection, merge polygons if overlapping, align the channels, detect ids
         elif self.marker_set.startswith('HO'):
-            self.get_logger().info(f'HO Detection Begun')
-            # Seperate Image
+            hamming = int(self.marker_set.replace('HO',''))
+
+            # Preprocessing to seperate images
+            t_pre = time.time()
             b, g, r = image[:, :, 0], image[:, :, 1], image[:, :, 2]
             blue, green, red = cv2.merge([b, b, b]), cv2.merge([g, g, g]), cv2.merge([r, r, r])
-            hamming = int(self.marker_set.replace('HO',''))
 
             # Detect R, G, and B markers
             r_corners, _, r_reject = self.merge_image_findings(r, hamming, save=False)
             g_corners, _, g_reject = self.merge_image_findings(g, hamming, save=False)
             b_corners, _, b_reject = self.merge_image_findings(b, hamming, save=False)
-            #print(f"Rectangles in R={len(r_reject)}, G={len(g_reject)}, B={len(b_reject)}")
+            t_det = time.time()
 
-            # 1. Merge bounding boxes from corners and rejected_corners
+            # Postprocessing: Merge bounding boxes from corners and rejected_corners
             data['r']['c'] = r_corners + r_reject
             data['g']['c'] = g_corners + g_reject
             data['b']['c'] = b_corners + b_reject
             unlabelled_markers = self.merge_overlays(data, include_ids=False)
-            #print(f"Unlabelled Markers: {len(unlabelled_markers)}")
 
             # 2. Extract the regions and rotate the channels
             #print('\n\n\n\n\n\n---------\n\n\n')
@@ -371,12 +403,7 @@ class Processor(Node):
 
             #   3. Pass corrected image back for detection again
             self.merge_image_findings(image, hamming)
-            self.get_logger().info(str(self.ids))
-
-            # OPTION 2:
-            #   3. Tidy them joined up
-            #   4. Pass each extracted marker for detection
-            pass
+            t_pos = time.time()
 
 
         # Save output for local reference
@@ -405,6 +432,25 @@ class Processor(Node):
                     self.buffer[ids[i][0]] = {'poses':[], 'rots':[]}
             self.publish_cam_relative_pose(marker_dict, self.marker_width)
 
+        t_loc = time.time()
+
+        if self.display_time:
+            # Save time estimates
+            self.formatting=[round(t_img-t0,4)] + self.formatting[:119]
+            self.preprocessing=[round(t_pre-t_img,4)] + self.preprocessing[:119]
+            self.detection=[round(t_det-t_pre,4)] + self.detection[:119]
+            self.postprocessing=[round(t_pos-t_det,4)] + self.postprocessing[:119]
+            self.localisation=[round(t_loc-t_pos,4)] + self.localisation[:119]
+
+            self.get_logger().info('-'*17)
+            self.get_logger().info('         Hamming: ' + str(self.marker_set))
+            self.get_logger().info('Image formatting: ' + str(round(sum(self.formatting)/120,4)))
+            self.get_logger().info('   Preprocessing: ' + str(round(sum(self.preprocessing)/120,4)))
+            self.get_logger().info('       Detection: ' + str(round(sum(self.detection)/120,4)))
+            self.get_logger().info('  Postprocessing: ' + str(round(sum(self.postprocessing)/120,4)))
+            self.get_logger().info('    Localisation: ' + str(round(sum(self.localisation)/120,4)))
+            self.get_logger().info('Detected Markers: ' + str(len(ids)))
+
 
         # Draw detected markers on the original image and publish to ros topic
         if self.label_color_image:
@@ -425,7 +471,6 @@ class Processor(Node):
             stag.drawDetectedMarkers(blue, rejected_corners, border_color=(255, 0, 0))
             ros_imageB = self.bridge.cv2_to_imgmsg(blue, encoding="passthrough")
             self.image_pubB.publish(ros_imageB)
-
 
     def publish_cam_relative_pose(self, marker_dict, marker_width):
         # This code only works assuming markers are placed perpendicular
