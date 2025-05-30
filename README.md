@@ -7,7 +7,7 @@ This work utilises the STag markers from [ref].
 The launch file includes multiple options for arguments.
 Environment variables can be set to override these rather than passing into the launch file.
 Current settings for these environment variable launch arguments can be viewed with:
-`ros2 launch stag2_ros system.launch.py --show-arguments`
+`ros2 launch stag_ros2 system.launch.py --show-arguments`
 
 
 # For running with 2 cameras:
